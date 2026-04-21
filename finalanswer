@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FINAL ANSWER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Creepster&family=VT323&family=IM+Fell+English+SC&family=Cinzel:wght@400;600;800&family=Special+Elite&family=Major+Mono+Display&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0a;
+    --fg: #f5f5f5;
+    --accent: #c1121f;
+  }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Special Elite', serif;
+    user-select: none;
+  }
+  #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+  .screen {
+    position: absolute; inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: clamp(16px, 3vw, 48px);
+    overflow: hidden;
+  }
+  .screen.active { display: flex; }
+
+  /* ========== GLOBAL FX ========== */
+  .scanlines::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(to bottom,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.15) 3px, rgba(0,0,0,0.15) 4px);
+    pointer-events: none; z-index: 100;
+  }
+  .grain::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.18 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    pointer-events: none; mix-blend-mode: overlay; opacity: 0.6; z-index: 99;
+  }
+  .vignette::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%);
+    pointer-events: none; z-index: 98;
+  }
+
+  /* ========== TITLE ========== */
+  #title {
+    background: radial-gradient(ellipse at 50% 30%, rgba(193,18,31,0.25) 0%, transparent 60%),
+                linear-gradient(180deg, #0a0a0a 0%, #1a0505 100%);
+    align-items: center; justify-content: center; text-align: center;
+  }
+  #title .logo {
+    font-family: 'Creepster', cursive;
+    font-size: clamp(60px, 14vw, 180px);
+    line-height: 0.9; color: #fff;
+    text-shadow: 0 0 20px rgba(193,18,31,0.8), 0 0 40px rgba(193,18,31,0.4), 4px 4px 0 #c1121f;
+    letter-spacing: 2px; animation: flicker 4s infinite;
+  }
+  #title .logo .blood { color: #c1121f; display: inline-block; transform: skewY(-3deg); }
+  #title .tag {
+    font-family: 'VT323', monospace; font-size: clamp(16px, 2vw, 24px);
+    letter-spacing: 0.4em; margin-top: 16px; color: #999; text-transform: uppercase;
+  }
+  .btn-main {
+    margin-top: 40px; padding: 18px 48px;
+    background: transparent; border: 2px solid #c1121f;
+    color: #fff; font-family: 'Cinzel', serif;
+    font-weight: 600; font-size: 18px; letter-spacing: 0.3em;
+    cursor: pointer; transition: all 0.3s;
+    text-transform: uppercase; z-index: 200;
+  }
+  .btn-main:hover {
+    background: #c1121f; letter-spacing: 0.5em;
+    box-shadow: 0 0 40px rgba(193,18,31,0.6);
+  }
+  .mode-btns { display: flex; gap: 16px; margin-top: 40px; flex-wrap: wrap; justify-content: center; z-index: 200; }
+  #title .warning {
+    position: absolute; bottom: 32px;
+    font-family: 'VT323', monospace; font-size: 14px;
+    color: #444; letter-spacing: 0.2em;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 1; } 41.99% { opacity: 1; }
+    42% { opacity: 0.3; } 43% { opacity: 1; }
+    45% { opacity: 0.5; } 46% { opacity: 1; }
+  }
+
+  /* ========== MULTIPLAYER SETUP ========== */
+  #mp-setup {
+    background: #0a0a0a;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  #mp-setup h2 {
+    font-family: 'IM Fell English SC', serif;
+    font-size: clamp(28px, 4vw, 48px);
+    letter-spacing: 0.15em; margin-bottom: 12px;
+  }
+  #mp-setup .sub {
+    font-family: 'VT323', monospace; color: #777;
+    letter-spacing: 0.2em; margin-bottom: 40px; font-size: 14px;
+  }
+  .player-count {
+    display: flex; gap: 16px; margin-bottom: 32px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .pc-btn {
+    padding: 24px 36px; background: #111; border: 1px solid #333;
+    color: #fff; font-family: 'Cinzel', serif; font-size: 24px;
+    cursor: pointer; transition: all 0.3s;
+    min-width: 100px;
+  }
+  .pc-btn:hover, .pc-btn.selected {
+    border-color: var(--accent); background: rgba(193,18,31,0.15);
+    transform: translateY(-4px);
+  }
+  .pc-btn .num { font-size: 36px; font-weight: 800; display: block; }
+  .pc-btn .label { font-size: 12px; letter-spacing: 0.2em; color: #aaa; }
+  .name-inputs {
+    display: flex; gap: 12px; margin-bottom: 32px;
+    flex-wrap: wrap; justify-content: center;
+    max-width: 600px;
+  }
+  .name-input {
+    padding: 12px 18px; background: #0a0a0a;
+    border: 1px solid #444; color: #fff;
+    font-family: 'Special Elite', serif; font-size: 16px;
+    text-align: center; width: 180px;
+    transition: border-color 0.3s;
+  }
+  .name-input:focus { outline: none; border-color: var(--accent); }
+
+  /* ========== CHARACTER SELECT ========== */
+  #select {
+    background: #0a0a0a;
+    align-items: center; justify-content: flex-start;
+    padding-top: 40px; overflow-y: auto;
+  }
+  #select h2 {
+    font-family: 'IM Fell English SC', serif;
+    font-size: clamp(24px, 3.5vw, 42px);
+    letter-spacing: 0.15em; margin-bottom: 8px;
+  }
+  #select .sub {
+    font-family: 'VT323', monospace; color: #777;
+    letter-spacing: 0.2em; margin-bottom: 24px; font-size: 14px;
+  }
+  #select .current-picker {
+    font-family: 'Creepster', cursive; font-size: 28px;
+    color: var(--accent); margin-bottom: 24px;
+    text-shadow: 0 0 20px rgba(193,18,31,0.6);
+  }
+  .taken-badge {
+    display: inline-block; padding: 2px 8px;
+    background: #333; color: #888; font-size: 10px;
+    letter-spacing: 0.2em; margin-left: 8px; vertical-align: middle;
+  }
+  .archetypes {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px; max-width: 1200px; width: 100%; padding: 0 20px;
+  }
+  .archetype {
+    border: 1px solid #333; background: #111;
+    padding: 24px; cursor: pointer; transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .archetype::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent); transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .archetype:hover:not(.taken) { background: #1a1a1a; transform: translateY(-4px); }
+  .archetype:hover:not(.taken)::before { transform: scaleX(1); }
+  .archetype.selected {
+    border-color: var(--accent); background: rgba(193,18,31,0.1);
+  }
+  .archetype.selected::before { transform: scaleX(1); }
+  .archetype.taken {
+    opacity: 0.4; cursor: not-allowed;
+    filter: grayscale(0.8);
+  }
+  .archetype .icon { font-size: 48px; margin-bottom: 12px; }
+  .archetype h3 {
+    font-family: 'Cinzel', serif; font-size: 20px;
+    letter-spacing: 0.15em; margin-bottom: 8px; text-transform: uppercase;
+  }
+  .archetype .desc {
+    font-family: 'Special Elite', serif; font-size: 13px;
+    color: #aaa; font-style: italic; margin-bottom: 16px; min-height: 40px;
+  }
+  .stats {
+    display: flex; flex-direction: column; gap: 4px;
+    font-family: 'VT323', monospace; font-size: 14px;
+  }
+  .stat { display: flex; justify-content: space-between; }
+  .stat.perk { color: #6ab04c; }
+  .stat.flaw { color: #c1121f; }
+  #confirm-btn {
+    margin-top: 32px; margin-bottom: 40px;
+    padding: 16px 40px; background: var(--accent); border: none;
+    color: #fff; font-family: 'Cinzel', serif;
+    font-weight: 600; letter-spacing: 0.3em; cursor: pointer;
+    font-size: 16px; text-transform: uppercase;
+    opacity: 0.3; pointer-events: none; transition: opacity 0.3s;
+    position: relative; z-index: 200;
+  }
+  #confirm-btn.ready { opacity: 1; pointer-events: auto; animation: pulse 2s infinite; }
+  #confirm-btn:hover { background: #8b0e17; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(193,18,31,0.6); }
+    50% { box-shadow: 0 0 0 20px rgba(193,18,31,0); }
+  }
+
+  /* ========== STORY SCREEN ========== */
+  #story {
+    background: radial-gradient(ellipse at 50% 60%, rgba(20,40,20,0.4) 0%, transparent 70%),
+                linear-gradient(180deg, #000 0%, #0a0f0a 100%);
+    align-items: center; justify-content: center; text-align: center; padding: 40px;
+  }
+  .story-inner { max-width: 720px; position: relative; z-index: 200; }
+  .story-header {
+    font-family: 'VT323', monospace; color: var(--accent);
+    letter-spacing: 0.4em; font-size: 14px; margin-bottom: 32px;
+    text-transform: uppercase; opacity: 0;
+    animation: storyFade 1s 0.3s forwards;
+  }
+  .story-text {
+    font-family: 'IM Fell English SC', serif;
+    font-size: clamp(16px, 2vw, 22px); line-height: 1.8;
+    color: #ccc; font-style: italic; margin-bottom: 24px; opacity: 0;
+  }
+  .story-text.p1 { animation: storyFade 2s 1s forwards; }
+  .story-text.p2 { animation: storyFade 2s 4s forwards; }
+  .story-text.p3 { animation: storyFade 2s 7s forwards; }
+  .story-text.final {
+    color: #fff; font-weight: bold;
+    font-size: clamp(18px, 2.2vw, 26px);
+    margin-top: 32px; animation: storyFade 2s 10s forwards;
+  }
+  @keyframes storyFade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  #run-btn {
+    margin-top: 48px; padding: 22px 64px;
+    background: var(--accent); border: 3px solid #ff3040;
+    color: #fff; font-family: 'Creepster', cursive;
+    font-size: clamp(28px, 4vw, 44px); letter-spacing: 0.3em;
+    cursor: pointer; position: relative; z-index: 200;
+    opacity: 0; animation: runAppear 1.5s 12s forwards;
+    box-shadow: 0 0 40px rgba(193,18,31,0.6), inset 0 0 20px rgba(0,0,0,0.4);
+    text-shadow: 2px 2px 0 #000;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  #run-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 80px rgba(193,18,31,0.9), inset 0 0 20px rgba(0,0,0,0.4);
+    animation: runShake 0.15s infinite;
+  }
+  @keyframes runAppear {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes runShake {
+    0%, 100% { transform: scale(1.05) translate(0, 0); }
+    25% { transform: scale(1.05) translate(-2px, 1px); }
+    75% { transform: scale(1.05) translate(2px, -1px); }
+  }
+
+  .audio-toggle {
+    position: fixed; top: 16px; right: 16px;
+    background: rgba(0,0,0,0.6); border: 1px solid #444;
+    color: #aaa; width: 42px; height: 42px; border-radius: 50%;
+    cursor: pointer; font-size: 18px; z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s;
+  }
+  .audio-toggle:hover { color: #fff; border-color: var(--accent); }
+
+  /* ========== GAME SCREEN ========== */
+  #game { padding: 0; background: #000; }
+  .game-bg {
+    position: absolute; inset: 0;
+    transition: background 1s, filter 0.5s; z-index: 1;
+  }
+  .parallax-layer {
+    position: absolute; inset: 0; pointer-events: none;
+    will-change: transform;
+  }
+  .parallax-layer.l1 { z-index: 2; }
+  .parallax-layer.l2 { z-index: 3; }
+  .parallax-layer.l3 { z-index: 4; }
+  .particles {
+    position: absolute; inset: 0; pointer-events: none;
+    z-index: 5; overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform;
+  }
+  .killer-silhouette {
+    position: absolute; bottom: -20px; left: -150px;
+    width: 120px; height: 180px;
+    z-index: 6; opacity: 0.4;
+    pointer-events: none;
+    filter: blur(2px);
+    transition: left 1s, opacity 0.5s;
+  }
+  .killer-silhouette.lunge {
+    animation: lunge 0.8s ease-out;
+  }
+  @keyframes lunge {
+    0% { transform: translateX(0) scale(1); opacity: 0.4; }
+    50% { transform: translateX(80px) scale(1.3); opacity: 0.8; }
+    100% { transform: translateX(0) scale(1); opacity: 0.4; }
+  }
+
+  .game-ui {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    padding: clamp(16px, 2.5vw, 32px);
+  }
+  .hud {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; gap: 20px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .hud-block {
+    display: flex; flex-direction: column; gap: 4px;
+    background: rgba(0,0,0,0.5); padding: 8px 14px;
+    border-left: 2px solid #333;
+    backdrop-filter: blur(6px);
+  }
+  .hud-block.active {
+    border-left-color: var(--accent);
+    background: rgba(193,18,31,0.15);
+    box-shadow: 0 0 20px rgba(193,18,31,0.3);
+  }
+  .hud-label {
+    font-family: 'VT323', monospace; font-size: 11px;
+    letter-spacing: 0.3em; color: #888; text-transform: uppercase;
+  }
+  .hud-value {
+    font-family: 'Cinzel', serif; font-weight: 800;
+    font-size: 16px; letter-spacing: 0.08em;
+  }
+  .lives { display: flex; gap: 4px; margin-top: 2px; }
+  .heart {
+    width: 16px; height: 16px;
+    color: var(--accent);
+    filter: drop-shadow(0 0 4px rgba(193,18,31,0.6));
+    transition: all 0.4s;
+  }
+  .heart.lost { color: #333; filter: none; transform: rotate(25deg); }
+  .turn-indicator {
+    font-family: 'Creepster', cursive;
+    text-align: center; font-size: 18px;
+    color: var(--accent); margin-bottom: 8px;
+    text-shadow: 0 0 10px rgba(193,18,31,0.6);
+    animation: turnPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes turnPulse {
+    0%, 100% { opacity: 0.8; } 50% { opacity: 1; transform: scale(1.02); }
+  }
+
+  /* Chase meter */
+  .chase { position: relative; width: 100%; margin-bottom: 20px; }
+  .chase-track {
+    position: relative; height: 52px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border: 1px solid #333; overflow: hidden;
+  }
+  .chase-icons { position: absolute; inset: 0; display: flex; align-items: center; }
+  .player-icon, .killer-icon {
+    position: absolute; font-size: 32px; line-height: 1;
+    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 0 8px rgba(0,0,0,0.8));
+  }
+  .player-icon { left: calc(100% - 44px); z-index: 2; animation: bob 0.6s ease-in-out infinite; }
+  .killer-icon { z-index: 1; animation: menace 1.2s ease-in-out infinite; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  @keyframes menace {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-3px) scale(1.08); }
+  }
+  .chase-label {
+    font-family: 'VT323', monospace; font-size: 14px;
+    letter-spacing: 0.3em; color: #888; margin-bottom: 6px;
+    display: flex; justify-content: space-between; text-transform: uppercase;
+  }
+  .chase-label .distance { color: var(--accent); }
+
+  /* Question area */
+  .question-wrap {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    max-width: 900px; margin: 0 auto; width: 100%;
+  }
+  .category {
+    font-family: 'VT323', monospace; font-size: 14px;
+    letter-spacing: 0.4em; color: var(--accent);
+    margin-bottom: 16px; text-transform: uppercase;
+    opacity: 0; animation: fadeIn 0.5s 0.1s forwards;
+  }
+  .question-text {
+    font-family: 'IM Fell English SC', serif;
+    font-size: clamp(20px, 2.6vw, 32px); line-height: 1.4;
+    margin-bottom: 32px; color: #fff;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+    opacity: 0; animation: fadeIn 0.5s 0.3s forwards;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .answers {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 12px; width: 100%; max-width: 700px;
+  }
+  .answer {
+    padding: 16px 20px; background: rgba(0,0,0,0.6);
+    border: 1px solid #444; color: #fff;
+    font-family: 'Special Elite', serif;
+    font-size: clamp(13px, 1.2vw, 16px);
+    cursor: pointer; transition: all 0.25s;
+    text-align: left; display: flex; align-items: center;
+    gap: 12px; backdrop-filter: blur(4px);
+    opacity: 0; animation: fadeIn 0.5s forwards;
+  }
+  .answer:nth-child(1) { animation-delay: 0.5s; }
+  .answer:nth-child(2) { animation-delay: 0.6s; }
+  .answer:nth-child(3) { animation-delay: 0.7s; }
+  .answer:nth-child(4) { animation-delay: 0.8s; }
+  .answer .letter {
+    font-family: 'Cinzel', serif; font-weight: 800;
+    color: var(--accent); font-size: 18px; min-width: 24px;
+  }
+  .answer:hover:not(.locked) {
+    background: rgba(193,18,31,0.15); border-color: var(--accent);
+    transform: translateX(4px);
+  }
+  .answer.correct { background: rgba(106, 176, 76, 0.25); border-color: #6ab04c; color: #fff; }
+  .answer.correct .letter { color: #6ab04c; }
+  .answer.wrong { background: rgba(193,18,31,0.35); border-color: var(--accent); animation: shake 0.5s; }
+  .answer.locked { cursor: default; pointer-events: none; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); } 40% { transform: translateX(8px); }
+    60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+  }
+
+  .perk-btn {
+    position: absolute; bottom: 24px; right: 24px;
+    padding: 12px 20px; background: rgba(193,18,31,0.2);
+    border: 1px solid var(--accent); color: #fff;
+    font-family: 'VT323', monospace; font-size: 16px;
+    letter-spacing: 0.2em; cursor: pointer;
+    text-transform: uppercase; transition: all 0.3s; z-index: 20;
+  }
+  .perk-btn:hover:not(:disabled) {
+    background: var(--accent);
+    box-shadow: 0 0 20px rgba(193,18,31,0.6);
+  }
+  .perk-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .progress-dots {
+    position: absolute; bottom: 24px; left: 24px;
+    display: flex; gap: 5px; z-index: 20;
+    flex-wrap: wrap; max-width: 300px;
+  }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #222; border: 1px solid #444;
+    transition: all 0.3s;
+  }
+  .dot.done { background: var(--accent); box-shadow: 0 0 8px rgba(193,18,31,0.6); }
+  .dot.current { background: #fff; border-color: #fff; }
+
+  /* Level intro */
+  .level-intro {
+    position: absolute; inset: 0; background: #000;
+    z-index: 50; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+    animation: levelFade 3.5s forwards;
+  }
+  @keyframes levelFade {
+    0% { opacity: 0; } 15% { opacity: 1; }
+    85% { opacity: 1; } 100% { opacity: 0; pointer-events: none; }
+  }
+  .level-num {
+    font-family: 'VT323', monospace; font-size: 18px;
+    letter-spacing: 0.5em; color: var(--accent); margin-bottom: 16px;
+  }
+  .level-title {
+    font-family: 'Creepster', cursive;
+    font-size: clamp(40px, 8vw, 80px);
+    color: #fff; letter-spacing: 0.05em; margin-bottom: 16px;
+  }
+  .level-sub {
+    font-family: 'IM Fell English SC', serif;
+    font-size: clamp(14px, 1.5vw, 18px);
+    color: #999; font-style: italic; max-width: 600px;
+  }
+
+  /* Feedback flash */
+  .flash {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 30; opacity: 0;
+  }
+  .flash.red {
+    background: radial-gradient(ellipse at center, rgba(193,18,31,0.6) 0%, transparent 70%);
+    animation: flashAnim 0.6s;
+  }
+  .flash.green {
+    background: radial-gradient(ellipse at center, rgba(106,176,76,0.4) 0%, transparent 70%);
+    animation: flashAnim 0.6s;
+  }
+  @keyframes flashAnim {
+    0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; }
+  }
+
+  /* ========== END SCREEN ========== */
+  #end {
+    background: #000; align-items: center;
+    justify-content: center; text-align: center;
+  }
+  .end-title {
+    font-family: 'Creepster', cursive;
+    font-size: clamp(50px, 10vw, 120px); margin-bottom: 24px;
+  }
+  .end-title.death {
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(193,18,31,0.8), 4px 4px 0 #000;
+    animation: deathShake 0.2s infinite;
+  }
+  .end-title.survive {
+    color: #fff;
+    text-shadow: 0 0 30px rgba(255,255,255,0.5);
+    background: linear-gradient(180deg, #fff 0%, #c1121f 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  @keyframes deathShake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-2px, 1px); }
+    50% { transform: translate(2px, -1px); }
+    75% { transform: translate(-1px, 2px); }
+  }
+  .end-stats {
+    font-family: 'VT323', monospace;
+    font-size: 18px; color: #aaa;
+    letter-spacing: 0.15em; margin-bottom: 12px;
+  }
+  .end-quote {
+    font-family: 'IM Fell English SC', serif;
+    font-style: italic; color: #666;
+    max-width: 500px; margin: 24px 0 40px; font-size: 18px;
+  }
+  .end-btns {
+    display: flex; gap: 16px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .end-btn {
+    padding: 14px 32px; background: transparent;
+    border: 2px solid #fff; color: #fff;
+    font-family: 'Cinzel', serif; font-weight: 600;
+    letter-spacing: 0.2em; cursor: pointer;
+    font-size: 14px; transition: all 0.3s; text-transform: uppercase;
+  }
+  .end-btn:hover { background: #fff; color: #000; }
+  .end-btn.primary { background: var(--accent); border-color: var(--accent); }
+  .end-btn.primary:hover { background: #fff; color: #000; border-color: #fff; }
+
+  /* ========== LEVEL VIBES - BACKGROUNDS ========== */
+
+  /* Level 1: Dark Woods */
+  .vibe-woods {
+    background: radial-gradient(ellipse at 50% 90%, rgba(40,70,30,0.4) 0%, transparent 70%),
+                radial-gradient(circle at 20% 40%, rgba(10,5,5,0.8) 0%, transparent 50%),
+                linear-gradient(180deg, #050a05 0%, #0a0f08 50%, #050705 100%);
+  }
+  .vibe-woods .l1 {
+    background-image:
+      radial-gradient(3px 120px at 5% 50%, #010201 0%, transparent 100%),
+      radial-gradient(4px 140px at 20% 55%, #020302 0%, transparent 100%),
+      radial-gradient(3px 130px at 40% 52%, #010201 0%, transparent 100%),
+      radial-gradient(5px 150px at 60% 57%, #020302 0%, transparent 100%),
+      radial-gradient(3px 125px at 80% 50%, #010201 0%, transparent 100%),
+      radial-gradient(4px 135px at 95% 55%, #020302 0%, transparent 100%);
+    background-repeat: no-repeat;
+    animation: parallaxSlow 30s linear infinite;
+  }
+  .vibe-woods .l2 {
+    background-image:
+      radial-gradient(5px 180px at 10% 60%, #030403 0%, transparent 100%),
+      radial-gradient(6px 200px at 35% 65%, #040504 0%, transparent 100%),
+      radial-gradient(5px 170px at 55% 62%, #030403 0%, transparent 100%),
+      radial-gradient(7px 190px at 80% 67%, #040504 0%, transparent 100%);
+    background-repeat: no-repeat;
+    animation: parallaxMed 18s linear infinite;
+  }
+  .vibe-woods .l3 {
+    background-image:
+      radial-gradient(8px 250px at 15% 75%, #060706 0%, transparent 100%),
+      radial-gradient(9px 260px at 45% 80%, #070807 0%, transparent 100%),
+      radial-gradient(10px 270px at 75% 77%, #060706 0%, transparent 100%);
+    background-repeat: no-repeat;
+    animation: parallaxFast 10s linear infinite;
+  }
+  @keyframes parallaxSlow {
+    from { background-position: 0 0; } to { background-position: -200px 0; }
+  }
+  @keyframes parallaxMed {
+    from { background-position: 0 0; } to { background-position: -400px 0; }
+  }
+  @keyframes parallaxFast {
+    from { background-position: 0 0; } to { background-position: -800px 0; }
+  }
+
+  /* Level 2: Saw / Industrial */
+  .vibe-saw {
+    background: radial-gradient(ellipse at 50% 50%, rgba(180,100,40,0.15) 0%, transparent 60%),
+                linear-gradient(180deg, #1a0a05 0%, #0a0503 100%);
+  }
+  .vibe-saw .l1 {
+    background-image: repeating-linear-gradient(90deg,
+      transparent 0px, transparent 80px,
+      rgba(60,40,20,0.4) 80px, rgba(60,40,20,0.4) 82px);
+    animation: parallaxSlow 20s linear infinite;
+  }
+  .vibe-saw .l2 {
+    background-image: repeating-linear-gradient(90deg,
+      transparent 0px, transparent 150px,
+      rgba(30,15,10,0.6) 150px, rgba(30,15,10,0.6) 155px);
+    animation: parallaxMed 12s linear infinite;
+  }
+  .vibe-saw::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 10% 20%, rgba(160,50,20,0.2) 0%, transparent 20%),
+      radial-gradient(circle at 80% 70%, rgba(120,40,20,0.2) 0%, transparent 25%);
+    animation: sawFlicker 3s infinite;
+  }
+  @keyframes sawFlicker {
+    0%, 100% { opacity: 0.6; }
+    48% { opacity: 0.6; } 50% { opacity: 0.2; } 52% { opacity: 0.6; }
+    78% { opacity: 0.6; } 80% { opacity: 0.3; } 82% { opacity: 0.6; }
+  }
+
+  /* Level 3: Psychological / Gaslight */
+  .vibe-psych {
+    background: linear-gradient(180deg, #1a1520 0%, #0a0710 50%, #05030a 100%);
+  }
+  .vibe-psych .l1 {
+    background-image:
+      radial-gradient(circle at 30% 40%, rgba(100,80,140,0.15) 0%, transparent 30%),
+      radial-gradient(circle at 70% 60%, rgba(80,60,120,0.15) 0%, transparent 30%);
+    animation: psychShift 8s ease-in-out infinite;
+  }
+  .vibe-psych .l2 {
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0px, transparent 40px,
+        rgba(200,180,220,0.02) 40px, rgba(200,180,220,0.02) 41px);
+    animation: psychDrift 20s linear infinite;
+  }
+  @keyframes psychShift {
+    0%, 100% { opacity: 1; transform: translate(0, 0); }
+    33% { opacity: 0.7; transform: translate(20px, -10px); }
+    66% { opacity: 0.9; transform: translate(-15px, 10px); }
+  }
+  @keyframes psychDrift {
+    from { background-position: 0 0; } to { background-position: 400px 400px; }
+  }
+
+  /* Level 4: J-Horror */
+  .vibe-jhorror {
+    background: linear-gradient(180deg, #0a0a0a 0%, #0f0505 100%);
+    filter: contrast(1.1);
+  }
+  .vibe-jhorror .l1 {
+    background-image:
+      linear-gradient(180deg, transparent 40%, rgba(40,30,30,0.4) 70%, rgba(20,15,15,0.8) 100%);
+  }
+  .vibe-jhorror::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0px, transparent 3px,
+        rgba(255,255,255,0.03) 3px, rgba(255,255,255,0.03) 4px);
+    animation: tvStatic 0.15s infinite;
+  }
+  @keyframes tvStatic {
+    0% { transform: translate(0, 0); } 25% { transform: translate(-1px, 1px); }
+    50% { transform: translate(1px, -1px); } 75% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
+  }
+
+  /* Level 5: Folk Horror / Daylight Cult */
+  .vibe-folk {
+    background: radial-gradient(ellipse at 50% 40%, rgba(255,200,100,0.3) 0%, transparent 60%),
+                linear-gradient(180deg, #3a2815 0%, #251810 40%, #1a1208 100%);
+  }
+  .vibe-folk .l1 {
+    background-image:
+      radial-gradient(circle at 20% 80%, rgba(180,140,60,0.3) 0%, transparent 30%),
+      radial-gradient(circle at 70% 75%, rgba(150,100,40,0.3) 0%, transparent 30%);
+    animation: parallaxSlow 40s linear infinite;
+  }
+  .vibe-folk .l2 {
+    background-image:
+      radial-gradient(ellipse 60px 20px at 15% 85%, rgba(80,60,30,0.7) 0%, transparent 100%),
+      radial-gradient(ellipse 80px 25px at 45% 88%, rgba(70,50,25,0.7) 0%, transparent 100%),
+      radial-gradient(ellipse 70px 22px at 75% 86%, rgba(90,65,30,0.7) 0%, transparent 100%);
+    animation: parallaxMed 25s linear infinite;
+  }
+
+  /* Level 6: Zombie Apocalypse */
+  .vibe-zombie {
+    background: radial-gradient(ellipse at 50% 70%, rgba(80,20,10,0.3) 0%, transparent 70%),
+                linear-gradient(180deg, #150505 0%, #0a0303 100%);
+  }
+  .vibe-zombie .l1 {
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0px, transparent 100px,
+        rgba(40,20,20,0.5) 100px, rgba(40,20,20,0.5) 102px);
+    animation: parallaxSlow 25s linear infinite;
+  }
+  .vibe-zombie .l2 {
+    background-image:
+      radial-gradient(circle at 10% 70%, rgba(120,30,20,0.15) 0%, transparent 15%),
+      radial-gradient(circle at 40% 75%, rgba(100,25,15,0.15) 0%, transparent 15%),
+      radial-gradient(circle at 70% 72%, rgba(110,28,18,0.15) 0%, transparent 15%);
+    animation: parallaxMed 15s linear infinite;
+  }
+
+  /* Level 7: Cosmic Void */
+  .vibe-cosmic {
+    background: radial-gradient(ellipse at 30% 40%, rgba(0,80,100,0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(60,0,80,0.4) 0%, transparent 50%),
+                linear-gradient(180deg, #000510 0%, #02000a 100%);
+  }
+  .vibe-cosmic .l1 {
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+      radial-gradient(1px 1px at 60% 70%, #fff, transparent),
+      radial-gradient(1px 1px at 80% 10%, #aaa, transparent),
+      radial-gradient(2px 2px at 33% 80%, #fff, transparent),
+      radial-gradient(1px 1px at 90% 50%, #4af2e0, transparent);
+    background-size: 300px 300px;
+    animation: cosmicDrift 60s linear infinite;
+  }
+  .vibe-cosmic .l2 {
+    background-image: radial-gradient(ellipse at 50% 50%, rgba(100,0,150,0.1) 0%, transparent 50%);
+    animation: cosmicPulse 8s ease-in-out infinite;
+  }
+  @keyframes cosmicDrift {
+    from { background-position: 0 0; } to { background-position: -600px 600px; }
+  }
+  @keyframes cosmicPulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.1); }
+  }
+
+  /* Level 8: Cryptid / Swamp */
+  .vibe-cryptid {
+    background: radial-gradient(ellipse at 50% 80%, rgba(20,60,40,0.4) 0%, transparent 70%),
+                linear-gradient(180deg, #0a1510 0%, #050a08 100%);
+  }
+  .vibe-cryptid .l1 {
+    background-image:
+      radial-gradient(ellipse 200px 30px at 30% 85%, rgba(30,50,35,0.6) 0%, transparent 100%),
+      radial-gradient(ellipse 180px 25px at 70% 88%, rgba(25,45,30,0.6) 0%, transparent 100%);
+    animation: cryptidFog 12s ease-in-out infinite;
+  }
+  .vibe-cryptid .l2 {
+    background-image:
+      radial-gradient(4px 140px at 15% 50%, rgba(10,20,15,0.9) 0%, transparent 100%),
+      radial-gradient(5px 160px at 45% 55%, rgba(15,25,18,0.9) 0%, transparent 100%),
+      radial-gradient(4px 150px at 75% 52%, rgba(10,20,15,0.9) 0%, transparent 100%);
+    animation: parallaxMed 20s linear infinite;
+  }
+  @keyframes cryptidFog {
+    0%, 100% { opacity: 0.6; transform: translateX(0); }
+    50% { opacity: 0.9; transform: translateX(30px); }
+  }
+
+  /* Level 9: True Crime Case File */
+  .vibe-truecrime {
+    background: linear-gradient(180deg, #1c1814 0%, #0f0d0a 100%);
+  }
+  .vibe-truecrime .l1 {
+    background-image:
+      linear-gradient(rgba(200,180,140,0.02) 1px, transparent 1px);
+    background-size: 100% 28px;
+  }
+  .vibe-truecrime::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      repeating-linear-gradient(-5deg, transparent 0px, transparent 80px,
+        rgba(100,40,30,0.08) 80px, rgba(100,40,30,0.08) 82px);
+  }
+
+  /* Level 10: Final Boss */
+  .vibe-boss {
+    background: radial-gradient(ellipse at 50% 50%, rgba(193,18,31,0.4) 0%, transparent 50%),
+                linear-gradient(180deg, #1a0000 0%, #0a0000 50%, #000 100%);
+    animation: bossThrob 3s ease-in-out infinite;
+  }
+  @keyframes bossThrob {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.2) saturate(1.3); }
+  }
+  .vibe-boss .l1 {
+    background-image:
+      radial-gradient(circle at 30% 30%, rgba(255,0,50,0.1) 0%, transparent 20%),
+      radial-gradient(circle at 70% 70%, rgba(193,18,31,0.15) 0%, transparent 25%);
+    animation: bossSwirl 10s linear infinite;
+  }
+  .vibe-boss .l2 {
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0px, transparent 50px,
+        rgba(193,18,31,0.05) 50px, rgba(193,18,31,0.05) 51px);
+    animation: psychDrift 15s linear infinite;
+  }
+  @keyframes bossSwirl {
+    from { transform: rotate(0deg) scale(1); }
+    to { transform: rotate(360deg) scale(1); }
+  }
+
+  @media (max-width: 600px) {
+    .answers { grid-template-columns: 1fr; }
+    .hud { flex-direction: column; gap: 12px; }
+    .progress-dots { max-width: 200px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <button class="audio-toggle" id="audio-toggle" onclick="toggleAudio()" title="Toggle sound">🔊</button>
+
+  <!-- ======== TITLE ======== -->
+  <div id="title" class="screen active scanlines grain vignette">
+    <div class="logo">FINAL <span class="blood">ANSWER</span></div>
+    <div class="tag">&bull; answer or die &bull;</div>
+    <div class="mode-btns">
+      <button class="btn-main" onclick="chooseMode('solo')">Solo</button>
+      <button class="btn-main" onclick="chooseMode('multi')">Multiplayer</button>
+    </div>
+    <div class="warning">viewer discretion &bull; side effects may include death</div>
+  </div>
+
+  <!-- ======== MP SETUP ======== -->
+  <div id="mp-setup" class="screen">
+    <h2>How Many Victims?</h2>
+    <div class="sub">&bull; hot-seat: pass the device each turn &bull;</div>
+    <div class="player-count" id="player-count-btns">
+      <div class="pc-btn" data-n="2" onclick="setPlayerCount(2)"><span class="num">2</span><span class="label">Friends</span></div>
+      <div class="pc-btn" data-n="3" onclick="setPlayerCount(3)"><span class="num">3</span><span class="label">Targets</span></div>
+      <div class="pc-btn" data-n="4" onclick="setPlayerCount(4)"><span class="num">4</span><span class="label">Corpses</span></div>
+    </div>
+    <div class="name-inputs" id="name-inputs"></div>
+    <button class="btn-main" id="mp-continue" onclick="mpContinue()" style="opacity:0.3; pointer-events:none;">Choose Archetypes</button>
+  </div>
+
+  <!-- ======== CHARACTER SELECT ======== -->
+  <div id="select" class="screen">
+    <h2>Choose Your Fate</h2>
+    <div class="sub">&bull; one will survive &bull;</div>
+    <div class="current-picker" id="current-picker"></div>
+    <div class="archetypes" id="archetypes"></div>
+    <button id="confirm-btn" onclick="confirmArchetype()">Seal Your Fate</button>
+  </div>
+
+  <!-- ======== STORY ======== -->
+  <div id="story" class="screen scanlines grain vignette">
+    <div class="story-inner">
+      <div class="story-header">&mdash; the story so far &mdash;</div>
+      <p class="story-text p1">You never should have taken the shortcut.</p>
+      <p class="story-text p2">The road through Blackwood Forest closed decades ago — after what happened at the cabin. The locals still won't speak its name. But your car broke down two miles back, and the gas station clerk just stared when you asked for directions.</p>
+      <p class="story-text p3">Now the trees press in on every side. Your flashlight flickers. Somewhere behind you, a branch snaps. Then another. Closer.</p>
+      <p class="story-text final">Something is out there. And it knows your name.</p>
+      <button id="run-btn" onclick="startGame()">RUN!</button>
+    </div>
+  </div>
+
+  <!-- ======== GAME ======== -->
+  <div id="game" class="screen">
+    <div class="game-bg" id="game-bg">
+      <div class="parallax-layer l1"></div>
+      <div class="parallax-layer l2"></div>
+      <div class="parallax-layer l3"></div>
+    </div>
+    <div class="particles" id="particles"></div>
+    <div class="killer-silhouette" id="killer-silhouette"></div>
+    <div class="scanlines"></div>
+    <div class="grain"></div>
+    <div class="vignette"></div>
+    <div class="flash" id="flash"></div>
+
+    <div class="game-ui">
+      <div class="turn-indicator" id="turn-indicator" style="display:none;"></div>
+      <div class="hud" id="hud"></div>
+
+      <div class="chase">
+        <div class="chase-label">
+          <span>The Chase</span>
+          <span class="distance" id="distance">SAFE DISTANCE</span>
+        </div>
+        <div class="chase-track">
+          <div class="chase-icons">
+            <span class="killer-icon" id="killer-icon">🔪</span>
+            <span class="player-icon" id="player-icon">🏃</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="question-wrap">
+        <div class="category" id="category">CATEGORY</div>
+        <div class="question-text" id="question-text">Question loading...</div>
+        <div class="answers" id="answers"></div>
+      </div>
+    </div>
+
+    <div class="progress-dots" id="progress-dots"></div>
+    <button class="perk-btn" id="perk-btn" onclick="usePerk()">⚡ Use Perk</button>
+    <div class="level-intro" id="level-intro" style="display:none;"></div>
+  </div>
+
+  <!-- ======== END ======== -->
+  <div id="end" class="screen scanlines grain vignette">
+    <div class="end-title" id="end-title">YOU DIED</div>
+    <div class="end-stats" id="end-stats"></div>
+    <div class="end-quote" id="end-quote"></div>
+    <div class="end-btns">
+      <button class="end-btn primary" onclick="location.reload()">Try Again</button>
+      <button class="end-btn" onclick="backToTitle()">Main Menu</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ======================================================================
+   AUDIO
+====================================================================== */
+let audioCtx = null;
+let audioEnabled = true;
+let ambientNodes = [];
+let heartbeatInterval = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { audioEnabled = false; }
+}
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  document.getElementById("audio-toggle").textContent = audioEnabled ? "🔊" : "🔇";
+  if (!audioEnabled) { stopAmbient(); stopHeartbeat(); }
+}
+function startAmbient() {
+  if (!audioEnabled) return;
+  initAudio(); if (!audioCtx) return;
+  stopAmbient();
+  const now = audioCtx.currentTime;
+  const master = audioCtx.createGain();
+  master.gain.setValueAtTime(0, now);
+  master.gain.linearRampToValueAtTime(0.15, now + 2);
+  master.connect(audioCtx.destination);
+
+  const drone1 = audioCtx.createOscillator();
+  drone1.type = "sawtooth"; drone1.frequency.setValueAtTime(55, now);
+  const drone1Gain = audioCtx.createGain(); drone1Gain.gain.value = 0.3;
+  const drone1Filter = audioCtx.createBiquadFilter();
+  drone1Filter.type = "lowpass"; drone1Filter.frequency.value = 200;
+  drone1.connect(drone1Filter).connect(drone1Gain).connect(master);
+  drone1.start();
+
+  const drone2 = audioCtx.createOscillator();
+  drone2.type = "sine"; drone2.frequency.setValueAtTime(82, now);
+  const drone2Gain = audioCtx.createGain(); drone2Gain.gain.value = 0.2;
+  drone2.connect(drone2Gain).connect(master); drone2.start();
+
+  const highOsc = audioCtx.createOscillator();
+  highOsc.type = "triangle"; highOsc.frequency.setValueAtTime(220, now);
+  const highGain = audioCtx.createGain(); highGain.gain.value = 0.04;
+  const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.15;
+  const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 15;
+  lfo.connect(lfoGain).connect(highOsc.frequency);
+  highOsc.connect(highGain).connect(master);
+  highOsc.start(); lfo.start();
+
+  const bufSize = 2 * audioCtx.sampleRate;
+  const noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = noiseBuf; noise.loop = true;
+  const noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = "bandpass"; noiseFilter.frequency.value = 400; noiseFilter.Q.value = 0.5;
+  const noiseGain = audioCtx.createGain(); noiseGain.gain.value = 0.08;
+  noise.connect(noiseFilter).connect(noiseGain).connect(master);
+  noise.start();
+
+  ambientNodes = [drone1, drone2, highOsc, lfo, noise, master];
+}
+function stopAmbient() {
+  if (ambientNodes.length === 0) return;
+  const now = audioCtx ? audioCtx.currentTime : 0;
+  try {
+    ambientNodes.forEach(n => {
+      if (n.gain) {
+        n.gain.cancelScheduledValues(now);
+        n.gain.linearRampToValueAtTime(0, now + 0.5);
+      }
+    });
+    setTimeout(() => {
+      ambientNodes.forEach(n => { try { n.stop && n.stop(); } catch(e){} });
+      ambientNodes = [];
+    }, 600);
+  } catch(e) {}
+}
+function startHeartbeat(bpm = 60) {
+  if (!audioEnabled || !audioCtx) return;
+  stopHeartbeat();
+  const interval = 60000 / bpm;
+  const beat = () => {
+    if (!audioCtx || !audioEnabled) return;
+    const now = audioCtx.currentTime;
+    [0, 0.15].forEach((offset, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(60, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(30, now + offset + 0.15);
+      gain.gain.setValueAtTime(0, now + offset);
+      gain.gain.linearRampToValueAtTime(i === 0 ? 0.4 : 0.25, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.2);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now + offset); osc.stop(now + offset + 0.25);
+    });
+  };
+  beat();
+  heartbeatInterval = setInterval(beat, interval);
+}
+function stopHeartbeat() {
+  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+}
+function playStinger(type) {
+  if (!audioEnabled || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  if (type === "wrong") {
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(200, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.6);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.6);
+  } else if (type === "correct") {
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.linearRampToValueAtTime(660, now + 0.15);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+  } else if (type === "scare") {
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = "sawtooth"; osc.frequency.value = 1200;
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.8);
+  } else if (type === "lunge") {
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.exponentialRampToValueAtTime(20, now + 0.4);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.4);
+  }
+}
+
+/* ======================================================================
+   ARCHETYPES
+====================================================================== */
+const ARCHETYPES = [
+  { id: "final_girl", name: "The Final Girl", icon: "🗡️",
+    desc: "Resourceful. Resilient. The last one standing.",
+    lives: 4,
+    perk: { name: "Second Chance", uses: 1, type: "revive" },
+    stats: [{label:"Lives",value:"4",type:"perk"},{label:"Perk",value:"Survive fatal hit",type:"perk"}]
+  },
+  { id: "virgin", name: "The Virgin", icon: "📖",
+    desc: "Pure of heart. Protected by fate... for now.",
+    lives: 5,
+    perk: { name: "Guardian Angel", uses: 2, type: "skip" },
+    stats: [{label:"Lives",value:"5",type:"perk"},{label:"Skips",value:"2",type:"perk"},{label:"Flaw",value:"Slow to act",type:"flaw"}]
+  },
+  { id: "jock", name: "The Jock", icon: "🏈",
+    desc: "Strong. Cocky. Not exactly a reader.",
+    lives: 2,
+    perk: { name: "Adrenaline Rush", uses: 2, type: "pushback" },
+    stats: [{label:"Lives",value:"2",type:"flaw"},{label:"Pushback",value:"2 uses",type:"perk"},{label:"Flaw",value:"Bad at lore",type:"flaw"}]
+  },
+  { id: "joker", name: "The Joker", icon: "🎭",
+    desc: "Always has a quip. First to crack under pressure.",
+    lives: 3,
+    perk: { name: "Fifty-Fifty", uses: 3, type: "fiftyfifty" },
+    stats: [{label:"Lives",value:"3",type:"perk"},{label:"50/50",value:"3 uses",type:"perk"},{label:"Flaw",value:"Dies early",type:"flaw"}]
+  },
+  { id: "nerd", name: "The Nerd", icon: "🔬",
+    desc: "Knows every movie. Hates every situation.",
+    lives: 3,
+    perk: { name: "Genre Savvy", uses: 1, type: "reveal" },
+    stats: [{label:"Lives",value:"3",type:"perk"},{label:"Reveal",value:"1 use",type:"perk"},{label:"Flaw",value:"Panics (+30%)",type:"flaw"}]
+  },
+  { id: "skeptic", name: "The Skeptic", icon: "🕵️",
+    desc: "Doesn't believe in ghosts. Will by morning.",
+    lives: 3,
+    perk: { name: "Cool Head", uses: 1, type: "nocost" },
+    stats: [{label:"Lives",value:"3",type:"perk"},{label:"Free Miss",value:"1 time",type:"perk"},{label:"Flaw",value:"Doubts all",type:"flaw"}]
+  }
+];
+
+/* ======================================================================
+   LEVELS - 10 total
+====================================================================== */
+const LEVELS = [
+  { num: 1, name: "Blackwood Forest", sub: "The chase begins. Don't look back.",
+    vibe: "vibe-woods", killer: "🔪", player: "🏃‍♀️",
+    category: "80s–00s Horror / Sci-Fi / Paranormal",
+    questions: 15, poolKey: "woods",
+    silhouette: "M20,180 L20,60 Q35,30 60,30 Q85,30 100,60 L100,180 M35,70 Q50,50 65,55 M60,30 L60,10 L75,10"
+  },
+  { num: 2, name: "The Game Begins", sub: "Hello. Would you like to play?",
+    vibe: "vibe-saw", killer: "🪚", player: "🔦",
+    category: "2010–Present Horror (Saw, Insidious, Conjuring...)",
+    questions: 15, poolKey: "modern",
+    silhouette: "M30,180 Q30,80 60,80 Q90,80 90,180 M40,80 Q55,20 60,20 Q65,20 80,80 M50,100 L70,100"
+  },
+  { num: 3, name: "The House Is Wrong", sub: "Nothing here is as it seems.",
+    vibe: "vibe-psych", killer: "👤", player: "🕯️",
+    category: "Psychological Thrillers / Gaslighting",
+    questions: 15, poolKey: "psych",
+    silhouette: "M25,180 L25,40 Q60,20 95,40 L95,180 M45,60 L45,80 M75,60 L75,80"
+  },
+  { num: 4, name: "The Cursed Tape", sub: "Seven days. You have seven days.",
+    vibe: "vibe-jhorror", killer: "👻", player: "📺",
+    category: "J-Horror & Asian Horror",
+    questions: 15, poolKey: "jhorror",
+    silhouette: "M30,180 L30,50 Q60,30 90,50 L90,180 M60,50 L60,10 Q60,5 65,5 L75,15"
+  },
+  { num: 5, name: "The Harvest", sub: "They smile as they close the ring.",
+    vibe: "vibe-folk", killer: "🌾", player: "🏃",
+    category: "Folk Horror & Cults",
+    questions: 15, poolKey: "folk",
+    silhouette: "M30,180 L30,70 L20,60 L40,50 L60,30 L80,50 L100,60 L90,70 L90,180 M45,90 L75,90"
+  },
+  { num: 6, name: "No Pulse", sub: "They don't stop. They never stop.",
+    vibe: "vibe-zombie", killer: "🧟", player: "🏃‍♂️",
+    category: "Zombie Apocalypse",
+    questions: 15, poolKey: "zombie",
+    silhouette: "M25,180 L30,80 Q40,60 50,65 Q60,70 65,60 Q75,55 85,75 L90,180 M35,75 L20,100 M80,70 L100,90"
+  },
+  { num: 7, name: "The Void Stares Back", sub: "In space, no one grades you.",
+    vibe: "vibe-cosmic", killer: "👽", player: "👨‍🚀",
+    category: "Cosmic Horror & Sci-Fi Horror",
+    questions: 15, poolKey: "cosmic",
+    silhouette: "M40,180 L40,70 Q60,50 80,70 L80,180 M40,70 L20,90 L20,130 M80,70 L100,90 L100,130 M55,80 L65,80"
+  },
+  { num: 8, name: "The Thing in the Trees", sub: "Some things were never meant to be seen.",
+    vibe: "vibe-cryptid", killer: "🦍", player: "📷",
+    category: "Cryptids & Urban Legends",
+    questions: 15, poolKey: "cryptid",
+    silhouette: "M20,180 L25,60 Q45,30 60,30 Q75,30 95,60 L100,180 M30,80 L10,110 M90,80 L110,110 M40,50 L40,30 M80,50 L80,30"
+  },
+  { num: 9, name: "Evidence of Evil", sub: "Every file tells a story. This one is still being written.",
+    vibe: "vibe-truecrime", killer: "🕴️", player: "🔦",
+    category: "True Crime & Real-World Horror",
+    questions: 15, poolKey: "truecrime",
+    silhouette: "M35,180 L35,50 Q60,30 85,50 L85,180 M60,30 L60,10 M45,70 L75,70"
+  },
+  { num: 10, name: "The Final Confrontation", sub: "Everything you've seen. All at once. All real.",
+    vibe: "vibe-boss", killer: "😈", player: "⚔️",
+    category: "All Categories Mixed",
+    questions: 20, poolKey: "boss",
+    silhouette: "M20,180 L25,40 Q60,10 95,40 L100,180 M30,60 L15,50 L5,70 M90,60 L105,50 L115,70 M45,30 L45,10 L55,20 M65,20 L75,10 L75,30"
+  }
+];
+
+/* ======================================================================
+   QUESTION BANKS
+====================================================================== */
+const QUESTIONS = {
+  // LEVEL 1: 1980-2000s horror / sci-fi / paranormal
+  woods: [
+    { q: "In Friday the 13th (1980), who is revealed as the killer?", a: ["Jason Voorhees", "Pamela Voorhees", "A camp counselor", "The sheriff"], c: 1 },
+    { q: "What year was A Nightmare on Elm Street first released?", a: ["1982", "1984", "1986", "1988"], c: 1 },
+    { q: "In The Evil Dead (1981), what unleashes the demons?", a: ["A cursed mirror", "The Necronomicon", "A Ouija board", "An ancient ritual"], c: 1 },
+    { q: "Who played Freddy Krueger originally?", a: ["Kane Hodder", "Robert Englund", "Doug Bradley", "Tony Todd"], c: 1 },
+    { q: "In The Thing (1982), what is the creature's primary ability?", a: ["Invisibility", "Mind control", "Imitating other life forms", "Time travel"], c: 2 },
+    { q: "What color blood does the xenomorph bleed in Alien?", a: ["Red", "Green", "Black", "Yellow acid"], c: 3 },
+    { q: "In Poltergeist (1982), what device does Carol Anne speak through?", a: ["A radio", "A television", "A telephone", "A Ouija board"], c: 1 },
+    { q: "Name of the killer doll in Child's Play (1988)?", a: ["Billy", "Chucky", "Slappy", "Annabelle"], c: 1 },
+    { q: "In Hellraiser (1987), who leads the Cenobites?", a: ["Pinhead", "The Chatterer", "Butterball", "Female Cenobite"], c: 0 },
+    { q: "The Blair Witch Project (1999) is set in what state?", a: ["Pennsylvania", "Maryland", "Virginia", "West Virginia"], c: 1 },
+    { q: "In Scream (1996), who is one of the two killers?", a: ["Stu Macher", "Dewey Riley", "Gale Weathers", "Cotton Weary"], c: 0 },
+    { q: "The Ring (2002) is a remake of which Japanese film?", a: ["Ju-On", "Ringu", "Pulse", "Dark Water"], c: 1 },
+    { q: "In The Sixth Sense (1999), what does Cole see?", a: ["The future", "Dead people", "Ghosts of killers", "His own death"], c: 1 },
+    { q: "Candyman requires his name said how many times in a mirror?", a: ["Three", "Five", "Seven", "Nine"], c: 1 },
+    { q: "In The Lost Boys (1987), what is the fictional town called?", a: ["Santa Carla", "Santa Monica", "Sunnydale", "Haddonfield"], c: 0 },
+    { q: "In Beetlejuice (1988), what book do the ghosts get?", a: ["Handbook for the Recently Deceased", "Guide to the Afterlife", "The Book of the Dead", "Ghosts: A Manual"], c: 0 },
+    { q: "In Buffy, what is the Hellmouth town called?", a: ["Haddonfield", "Sunnydale", "Santa Carla", "Mystic Falls"], c: 1 },
+    { q: "The Fly (1986) was directed by?", a: ["John Carpenter", "David Cronenberg", "Wes Craven", "George Romero"], c: 1 },
+    { q: "What year was The Shining released?", a: ["1978", "1980", "1982", "1984"], c: 1 },
+    { q: "In An American Werewolf in London (1981), where is the attack?", a: ["London streets", "The Yorkshire Moors", "A cemetery", "A subway"], c: 1 },
+    { q: "In Silence of the Lambs, what moth is left with victims?", a: ["Luna moth", "Death's-head hawkmoth", "Atlas moth", "Io moth"], c: 1 },
+    { q: "In Event Horizon (1997), the ship has traveled to?", a: ["A black hole / another dimension", "Mars", "Neptune", "Alpha Centauri"], c: 0 },
+    { q: "What 1999 film popularized 'red pill, blue pill'?", a: ["Dark City", "The Matrix", "eXistenZ", "Pi"], c: 1 },
+    { q: "In Pet Sematary (1989), what returns wrong?", a: ["Only animals", "Only people", "Anything buried there", "Only pets"], c: 2 },
+    { q: "In I Know What You Did Last Summer, the weapon is?", a: ["A machete", "A fishing hook", "An axe", "A hunting knife"], c: 1 }
+  ],
+
+  // LEVEL 2: 2010-present horror (Saw-era + modern)
+  modern: [
+    { q: "What is the name of the puppet in the Saw franchise?", a: ["Billy", "Chucky", "Slappy", "Jigsaw"], c: 0 },
+    { q: "Jigsaw's real name in the Saw series is?", a: ["John Kramer", "Mark Hoffman", "Amanda Young", "Lawrence Gordon"], c: 0 },
+    { q: "In Insidious, what is the astral realm called?", a: ["The Veil", "The Further", "The Beyond", "The Shadow"], c: 1 },
+    { q: "The Conjuring films follow which paranormal investigators?", a: ["The Warrens", "The Lutzes", "The Perrons", "The Harmons"], c: 0 },
+    { q: "In Hereditary (2018), what entity is summoned?", a: ["Pazuzu", "Paimon", "Valak", "Baphomet"], c: 1 },
+    { q: "Who directed Midsommar and Hereditary?", a: ["Ari Aster", "Jordan Peele", "Robert Eggers", "Mike Flanagan"], c: 0 },
+    { q: "In Get Out (2017), what is the Sunken Place?", a: ["A dream dimension", "A mental prison", "A hidden basement", "An afterlife"], c: 1 },
+    { q: "The Babadook is from what country's cinema?", a: ["Canada", "New Zealand", "Australia", "UK"], c: 2 },
+    { q: "In It Follows (2014), what is the curse transmitted by?", a: ["A cursed object", "Sex", "A kiss", "Eye contact"], c: 1 },
+    { q: "In The Witch (2015), what is the goat's name?", a: ["Black Phillip", "Azazel", "Old Scratch", "Lucifer"], c: 0 },
+    { q: "A Quiet Place (2018) creatures hunt by what?", a: ["Smell", "Sight", "Sound", "Heat"], c: 2 },
+    { q: "The Nun (2018) is a spin-off of which franchise?", a: ["Insidious", "The Conjuring", "Paranormal Activity", "Sinister"], c: 1 },
+    { q: "In Us (2019), what are the doppelgangers called?", a: ["Shadows", "The Tethered", "The Others", "Replicants"], c: 1 },
+    { q: "In Sinister (2012), what is the entity named?", a: ["Bughuul", "Valak", "Samara", "Kayako"], c: 0 },
+    { q: "Paranormal Activity (2007) is famous for being filmed how?", a: ["16mm film", "Found footage / home cameras", "IMAX", "One continuous take"], c: 1 },
+    { q: "Annabelle (2014) is tied to which larger franchise?", a: ["The Conjuring Universe", "Insidious", "Sinister", "Paranormal Activity"], c: 0 },
+    { q: "In Jigsaw traps, what is the typical goal?", a: ["Escape before time runs out", "Solve a riddle forever", "Defeat Jigsaw in combat", "Confess on tape"], c: 0 },
+    { q: "In Smile (2022), the curse is passed via what?", a: ["A trauma witnessed", "A whispered word", "A cursed ring", "A dream"], c: 0 },
+    { q: "In Barbarian (2022), the setting is?", a: ["A cursed forest", "A rental house basement", "A hospital", "A subway tunnel"], c: 1 },
+    { q: "In Pearl (2022), the lead is a prequel to which film?", a: ["Midsommar", "X", "Bodies Bodies Bodies", "Malignant"], c: 1 },
+    { q: "Talk to Me (2022) features what cursed object?", a: ["A mirror", "An embalmed hand", "A locket", "A skull"], c: 1 },
+    { q: "In The Black Phone (2021), the villain is played by?", a: ["Ethan Hawke", "Nicolas Cage", "Bill Skarsgård", "Dan Stevens"], c: 0 },
+    { q: "Longlegs (2024) stars which actor as the killer?", a: ["Willem Dafoe", "Nicolas Cage", "Jared Leto", "Joaquin Phoenix"], c: 1 },
+    { q: "In The Invisible Man (2020), the antagonist is?", a: ["A jealous scientist ex", "A serial killer", "A government agent", "A ghost"], c: 0 },
+    { q: "X (2022) and MaXXXine are directed by?", a: ["Ti West", "Robert Eggers", "Ari Aster", "Jordan Peele"], c: 0 }
+  ],
+
+  // LEVEL 3: Psychological thrillers / gaslighting
+  psych: [
+    { q: "The term 'gaslighting' originates from which 1944 film?", a: ["Rebecca", "Gaslight", "Notorious", "Suspicion"], c: 1 },
+    { q: "In Rosemary's Baby (1968), what are Rosemary's neighbors?", a: ["Retired actors", "A Satanic coven", "Ghosts", "Vampires"], c: 1 },
+    { q: "In Shutter Island (2010), the twist reveals the protagonist is?", a: ["A ghost", "A patient, not a marshal", "A killer escaping", "Dreaming"], c: 1 },
+    { q: "In Gone Girl (2014), Amy frames her husband for?", a: ["Her murder", "Tax fraud", "Theft", "Affair"], c: 0 },
+    { q: "Black Swan (2010) follows a dancer spiraling into what?", a: ["Depression", "Psychosis", "Addiction", "Amnesia"], c: 1 },
+    { q: "In The Others (2001), the twist is that Grace and her children are?", a: ["Demons", "Dead / ghosts", "Aliens", "Dreaming"], c: 1 },
+    { q: "Fight Club (1999) explores which psychological condition?", a: ["Schizophrenia (loosely)", "Dissociative identity (loosely)", "Amnesia", "Sociopathy"], c: 1 },
+    { q: "In Misery (1990), Annie Wilkes imprisons a?", a: ["Doctor", "Novelist", "Priest", "Mechanic"], c: 1 },
+    { q: "In Mulholland Drive (2001), the film is famously?", a: ["A clear thriller", "Non-linear / interpretive", "A comedy", "A silent film"], c: 1 },
+    { q: "In The Machinist (2004), Christian Bale's character suffers from?", a: ["Insomnia tied to guilt", "Cancer", "A curse", "Amnesia from war"], c: 0 },
+    { q: "In Memento (2000), the protagonist has what condition?", a: ["Amnesia", "Anterograde amnesia", "Depression", "PTSD"], c: 1 },
+    { q: "Se7en (1995) revolves around murders based on what?", a: ["Zodiac signs", "The seven deadly sins", "Tarot cards", "Bible verses"], c: 1 },
+    { q: "In The Silence of the Lambs, Hannibal Lecter is a?", a: ["Priest", "Psychiatrist", "Professor", "Detective"], c: 1 },
+    { q: "In Psycho (1960), Norman Bates is driven by what?", a: ["Greed", "His dead mother's persona", "Revenge", "A curse"], c: 1 },
+    { q: "In Unsane (2018), Sawyer is committed against her will because?", a: ["She's dangerous", "A bureaucratic trap + a stalker", "She's a criminal", "She's insane"], c: 1 },
+    { q: "In Girl on the Train (2016), the protagonist has?", a: ["Alcoholic blackouts", "Amnesia", "Schizophrenia", "Dementia"], c: 0 },
+    { q: "Prisoners (2013) features what type of investigation?", a: ["Missing children", "Serial killer", "Bank heist", "Haunted house"], c: 0 },
+    { q: "In The Sixth Sense (1999), the famous twist is that Malcolm is?", a: ["A ghost", "A dream", "Psychic", "His patient"], c: 0 },
+    { q: "Jacob's Ladder (1990) takes place mostly in?", a: ["Reality", "The mind of a dying soldier", "A hospital ward", "Heaven"], c: 1 },
+    { q: "In Identity (2003), the guests at the motel are?", a: ["Ghosts", "Personalities of one man", "Aliens", "Robots"], c: 1 },
+    { q: "In Orphan (2009), the twist about Esther is?", a: ["She is a ghost", "She is an adult with a disorder", "She is a clone", "She is possessed"], c: 1 },
+    { q: "Single White Female (1992) explores obsession between?", a: ["Siblings", "Coworkers", "Roommates", "Spouses"], c: 2 },
+    { q: "In The Talented Mr. Ripley (1999), Tom Ripley is a?", a: ["Priest", "Con man/killer", "Detective", "Mobster"], c: 1 },
+    { q: "The Machinist's Trevor Reznik weighed approximately how much?", a: ["140 lbs", "120 lbs", "Under 120 lbs (actor lost weight)", "100 lbs"], c: 2 },
+    { q: "In Fracture (2007), Hopkins plays a man who kills his wife and?", a: ["Hides the body", "Turns himself in immediately", "Outsmarts the legal system", "Frames a neighbor"], c: 2 }
+  ],
+
+  // LEVEL 4: J-horror / Asian horror
+  jhorror: [
+    { q: "Ringu (1998) is from which country?", a: ["Japan", "South Korea", "Thailand", "Hong Kong"], c: 0 },
+    { q: "In Ju-On / The Grudge, the vengeful spirit is named?", a: ["Samara", "Sadako", "Kayako", "Yuki"], c: 2 },
+    { q: "In Ringu, the ghost girl is?", a: ["Kayako", "Sadako", "Mitsuko", "Toshio"], c: 1 },
+    { q: "The American remake of Ju-On is titled?", a: ["The Ring", "The Grudge", "Pulse", "Dark Water"], c: 1 },
+    { q: "Kairo (2001) in English is titled?", a: ["The Ring", "Pulse", "One Missed Call", "Dark Water"], c: 1 },
+    { q: "A Tale of Two Sisters (2003) is from which country?", a: ["Japan", "South Korea", "China", "Thailand"], c: 1 },
+    { q: "The Wailing (2016) is a Korean horror involving?", a: ["A vampire", "A rural village possession", "A serial killer", "A zombie outbreak"], c: 1 },
+    { q: "Audition (1999) was directed by?", a: ["Takashi Miike", "Kiyoshi Kurosawa", "Hideo Nakata", "Park Chan-wook"], c: 0 },
+    { q: "In Dark Water (2002), the haunting centers on?", a: ["A mirror", "An apartment + a leaking ceiling", "A doll", "A well"], c: 1 },
+    { q: "Train to Busan (2016) features what outbreak?", a: ["Zombies", "Vampires", "A virus", "Ghosts"], c: 0 },
+    { q: "One Missed Call (2003) features a curse spread via?", a: ["Email", "Cell phone voicemails", "Letters", "Radio"], c: 1 },
+    { q: "In The Eye (2002), the protagonist receives what?", a: ["A cursed cornea transplant", "A heart transplant", "A kidney transplant", "Blood transfusion"], c: 0 },
+    { q: "Shutter (2004) is from which country originally?", a: ["Japan", "South Korea", "Thailand", "Philippines"], c: 2 },
+    { q: "In Ju-On, what is Kayako's son's name?", a: ["Toshio", "Kenji", "Hiroshi", "Takeo"], c: 0 },
+    { q: "What sound is iconic to Kayako's haunting?", a: ["A bell", "A death rattle / throat croak", "A whisper", "A scream"], c: 1 },
+    { q: "In Ringu, after watching the tape, you have how long to live?", a: ["3 days", "7 days", "13 days", "30 days"], c: 1 },
+    { q: "Noroi: The Curse (2005) is in what style?", a: ["Found footage", "Documentary pastiche", "Traditional drama", "Silent film"], c: 1 },
+    { q: "Oldboy (2003), the Korean thriller, was directed by?", a: ["Park Chan-wook", "Bong Joon-ho", "Kim Jee-woon", "Na Hong-jin"], c: 0 },
+    { q: "In The Host (2006), a creature emerges from where?", a: ["The sea", "The Han River", "A sewer", "A lake"], c: 1 },
+    { q: "Perfect Blue (1997) was directed by?", a: ["Satoshi Kon", "Hayao Miyazaki", "Mamoru Oshii", "Isao Takahata"], c: 0 },
+    { q: "In The Grudge, what typically happens to those who enter the house?", a: ["They escape", "They die or are cursed", "They transform", "They lose memory"], c: 1 },
+    { q: "Ichi the Killer (2001) director is?", a: ["Takashi Miike", "Kiyoshi Kurosawa", "Sion Sono", "Hideo Nakata"], c: 0 },
+    { q: "Uzumaki is based on a manga by?", a: ["Junji Ito", "Katsuhiro Otomo", "Osamu Tezuka", "Kazuo Umezu"], c: 0 },
+    { q: "Gonjiam: Haunted Asylum (2018) is from which country?", a: ["Japan", "South Korea", "Thailand", "Hong Kong"], c: 1 },
+    { q: "The Medium (2021) is a joint production of Korea and?", a: ["Japan", "Thailand", "Vietnam", "Malaysia"], c: 1 }
+  ],
+
+  // LEVEL 5: Folk horror
+  folk: [
+    { q: "Midsommar (2019) takes place in?", a: ["Norway", "Sweden", "Finland", "Iceland"], c: 1 },
+    { q: "The Wicker Man (1973) is set on a fictional island called?", a: ["Summerisle", "Skye", "Iona", "Mull"], c: 0 },
+    { q: "The Witch (2015) takes place in what century?", a: ["16th", "17th", "18th", "19th"], c: 1 },
+    { q: "Midsommar's cult is called the?", a: ["Harga", "Vanir", "Asatru", "Norn"], c: 0 },
+    { q: "In The Witch, what does Black Phillip offer Thomasin?", a: ["Gold", "To live deliciously", "Eternal life", "Forgiveness"], c: 1 },
+    { q: "In The Wicker Man, Sgt. Howie is investigating?", a: ["A murder", "A missing girl", "A tax fraud case", "A drug ring"], c: 1 },
+    { q: "Kill List (2011) is a folk horror by?", a: ["Ben Wheatley", "Robert Eggers", "Ari Aster", "Jordan Peele"], c: 0 },
+    { q: "Apostle (2018) is set in what time period?", a: ["Early 1900s", "Medieval", "1970s", "Victorian"], c: 0 },
+    { q: "In Midsommar, the festival happens every how many years?", a: ["50", "70", "90", "100"], c: 2 },
+    { q: "The Ritual (2017) follows hikers in which country?", a: ["Norway", "Sweden", "Finland", "Iceland"], c: 1 },
+    { q: "In folk horror, the key motif is often?", a: ["Urban decay", "Nature and rural ritual", "Technology", "Space exploration"], c: 1 },
+    { q: "In Midsommar, what is the ättestupa?", a: ["A dance ritual", "A cliff where elders die", "A healing ceremony", "A marriage rite"], c: 1 },
+    { q: "In The Witch, the family is expelled from their colony for?", a: ["Theft", "Religious dispute", "Murder", "Witchcraft"], c: 1 },
+    { q: "In Hereditary (also folk-adjacent), Paimon is what kind of demon?", a: ["A prince of Hell", "A king of Hell", "A duke of Hell", "A watcher"], c: 1 },
+    { q: "In The Wicker Man's finale, Sgt. Howie is?", a: ["Rescued", "Burned alive in a wicker statue", "Drowned", "Hanged"], c: 1 },
+    { q: "The 'Unholy Trinity' of folk horror typically includes Witchfinder General, Blood on Satan's Claw, and?", a: ["The Wicker Man", "The Witch", "Hereditary", "Midsommar"], c: 0 },
+    { q: "In Apostle, a pagan goddess is held captive and?", a: ["Bled to feed the island", "Offered sacrifices", "Imprisoned in a tree", "Starved"], c: 0 },
+    { q: "In Children of the Corn, the cult worships?", a: ["Satan", "He Who Walks Behind the Rows", "Pan", "Moloch"], c: 1 },
+    { q: "The VVitch's setting is which American region?", a: ["New England", "Appalachia", "The South", "The Midwest"], c: 0 },
+    { q: "In Midsommar, Dani becomes the?", a: ["May Queen", "Harvest Queen", "Sun Queen", "Dawn Queen"], c: 0 },
+    { q: "The Blood on Satan's Claw (1971) is set in what era?", a: ["17th century", "18th century", "Medieval", "Victorian"], c: 1 },
+    { q: "In Kill List, the ending reveals a?", a: ["Ghost", "Cult sacrifice", "Alien", "Serial killer"], c: 1 },
+    { q: "In The Ritual, the creature is associated with?", a: ["Greek myth", "Norse myth", "Celtic myth", "Slavic myth"], c: 1 },
+    { q: "In Pagan rituals depicted in folk horror, the color white often represents?", a: ["Purity / sacrifice", "Death", "Winter", "Mourning"], c: 0 },
+    { q: "Eggers, Aster, and Wheatley are all associated with?", a: ["Slasher revival", "Folk horror revival (~2015+)", "Body horror", "Found footage"], c: 1 }
+  ],
+
+  // LEVEL 6: Zombie apocalypse
+  zombie: [
+    { q: "Who directed Night of the Living Dead (1968)?", a: ["George A. Romero", "John Carpenter", "Wes Craven", "Tobe Hooper"], c: 0 },
+    { q: "28 Days Later (2002) zombies are known for being?", a: ["Slow and shambling", "Fast / rage-infected", "Intelligent", "Invisible"], c: 1 },
+    { q: "The Walking Dead comic creator is?", a: ["Robert Kirkman", "Frank Miller", "Alan Moore", "Garth Ennis"], c: 0 },
+    { q: "In The Last of Us, zombies are created by what?", a: ["A virus", "A fungus (Cordyceps)", "A curse", "Radiation"], c: 1 },
+    { q: "Shaun of the Dead (2004) is directed by?", a: ["Edgar Wright", "Guy Ritchie", "Christopher Nolan", "Danny Boyle"], c: 0 },
+    { q: "In Dawn of the Dead, the iconic setting is?", a: ["A school", "A mall", "A prison", "A hospital"], c: 1 },
+    { q: "World War Z (2013) stars?", a: ["Brad Pitt", "Tom Cruise", "Matt Damon", "Leonardo DiCaprio"], c: 0 },
+    { q: "In Train to Busan, the setting is?", a: ["A train in South Korea", "A ferry in Japan", "A bus in Seoul", "A plane to Tokyo"], c: 0 },
+    { q: "Zombieland (2009) features a main character obsessed with what snack?", a: ["Oreos", "Twinkies", "Skittles", "Doritos"], c: 1 },
+    { q: "The Walking Dead's main protagonist early seasons is?", a: ["Rick Grimes", "Daryl Dixon", "Glenn Rhee", "Negan"], c: 0 },
+    { q: "In 28 Weeks Later, the outbreak resurgence begins where?", a: ["London", "Manchester", "A safe zone quarantined area", "Paris"], c: 2 },
+    { q: "Romero's Land of the Dead depicts zombies that?", a: ["Can learn / evolve", "Fly", "Talk fluently", "Swim"], c: 0 },
+    { q: "In The Girl with All the Gifts, the infection is?", a: ["A fungus", "A virus", "A parasite", "A curse"], c: 0 },
+    { q: "Return of the Living Dead (1985) introduces what craving?", a: ["Hearts", "Brains", "Livers", "Blood"], c: 1 },
+    { q: "In I Am Legend (2007), the infected are?", a: ["Standard zombies", "CGI night-hunters", "Vampires", "Ghosts"], c: 1 },
+    { q: "In Night of the Living Dead, the farmhouse is in?", a: ["Pennsylvania", "Ohio", "New York", "Indiana"], c: 0 },
+    { q: "In The Last of Us, what is the final stage of infected called?", a: ["Runner", "Clicker", "Bloater", "Shambler"], c: 2 },
+    { q: "Army of the Dead (2021) was directed by?", a: ["Zack Snyder", "James Gunn", "Denis Villeneuve", "Matthew Vaughn"], c: 0 },
+    { q: "In REC (2007), the outbreak happens in?", a: ["A hospital", "An apartment building", "A school", "A train"], c: 1 },
+    { q: "The Crazies (1973, remade 2010) features what contaminant?", a: ["Fungal spores", "A military biotoxin", "Radiation", "Demonic presence"], c: 1 },
+    { q: "What popular 'rules' list comes from Zombieland?", a: ["The 10 Commandments", "Columbus's Rules", "The Survivor Code", "Raccoon City Protocol"], c: 1 },
+    { q: "Pontypool (2008) features a virus transmitted by?", a: ["Air", "Blood", "Language", "Water"], c: 2 },
+    { q: "In Dead Alive / Braindead, the director later famous for LOTR is?", a: ["Peter Jackson", "Sam Raimi", "Guillermo del Toro", "Neill Blomkamp"], c: 0 },
+    { q: "The Resident Evil film series stars?", a: ["Milla Jovovich", "Kate Beckinsale", "Angelina Jolie", "Charlize Theron"], c: 0 },
+    { q: "In The Walking Dead, what term do survivors use for zombies?", a: ["Biters", "Walkers", "Rotters", "All of the above"], c: 3 }
+  ],
+
+  // LEVEL 7: Cosmic / sci-fi horror
+  cosmic: [
+    { q: "Who wrote The Call of Cthulhu?", a: ["Edgar Allan Poe", "H.P. Lovecraft", "Bram Stoker", "Clark Ashton Smith"], c: 1 },
+    { q: "What is the sunken city where Cthulhu sleeps?", a: ["Atlantis", "R'lyeh", "Carcosa", "Innsmouth"], c: 1 },
+    { q: "The 'blind idiot god' in Lovecraft's mythos is?", a: ["Cthulhu", "Nyarlathotep", "Azathoth", "Yog-Sothoth"], c: 2 },
+    { q: "In Alien (1979), the ship is called?", a: ["Nostromo", "Sulaco", "Prometheus", "Covenant"], c: 0 },
+    { q: "The Thing (1982) is set in?", a: ["The Arctic", "Antarctica", "Siberia", "Alaska"], c: 1 },
+    { q: "In Event Horizon, the Latin warning translates to roughly?", a: ["Beware the dark", "Save yourself from Hell", "The void calls", "We are lost"], c: 1 },
+    { q: "Annihilation (2018) is adapted from a novel by?", a: ["Stephen King", "Jeff VanderMeer", "Ted Chiang", "China Miéville"], c: 1 },
+    { q: "In Alien, what is the creature's life cycle stage called the 'face-hugger'?", a: ["Egg", "Larva", "Facehugger (second stage)", "Chestburster"], c: 2 },
+    { q: "The Color Out of Space focuses on?", a: ["A meteor with alien color", "A plague", "A cursed lake", "A portal"], c: 0 },
+    { q: "In Prometheus (2012), the ship is hunting for?", a: ["Aliens to weaponize", "Human origins (the Engineers)", "A planet to colonize", "A lost ship"], c: 1 },
+    { q: "Nyarlathotep is often called the?", a: ["Crawling Chaos", "Sleeper of R'lyeh", "Daemon Sultan", "Goat with 1000 Young"], c: 0 },
+    { q: "Lovecraft's fictional New England town known for fish-people is?", a: ["Arkham", "Dunwich", "Innsmouth", "Kingsport"], c: 2 },
+    { q: "In Event Horizon, the ship's experimental drive creates?", a: ["FTL travel via a black hole", "Time travel", "Teleportation", "Cloning"], c: 0 },
+    { q: "The film Sunshine (2007) is directed by?", a: ["Danny Boyle", "Ridley Scott", "Christopher Nolan", "Denis Villeneuve"], c: 0 },
+    { q: "In Alien, what destroys the creature at the end?", a: ["Ripley ejects it into space", "Fire", "A chest burst", "Acid"], c: 0 },
+    { q: "Nope (2022) features what kind of antagonist?", a: ["Cultists", "A UFO / predatory creature", "A zombie horde", "Ghosts"], c: 1 },
+    { q: "In John Carpenter's In the Mouth of Madness, the author's name is?", a: ["Sutter Cane", "Thorne Kane", "Corwin Pratt", "Herbert West"], c: 0 },
+    { q: "The Void (2016) pays homage to which director's style?", a: ["John Carpenter", "David Lynch", "Dario Argento", "Stanley Kubrick"], c: 0 },
+    { q: "In The Thing, what do they use to identify who's infected?", a: ["Blood test / hot wire", "X-ray", "Bite test", "Voice test"], c: 0 },
+    { q: "Cthulhu's call is said to drive people to?", a: ["Madness", "Song", "Obedience", "Flight"], c: 0 },
+    { q: "At the Mountains of Madness is set in?", a: ["The Arctic", "Antarctica", "Everest", "Siberia"], c: 1 },
+    { q: "In Annihilation, the strange zone is called?", a: ["Area X / The Shimmer", "The Zone", "The Wastes", "The Veil"], c: 0 },
+    { q: "The Mist (2007) is based on a novella by?", a: ["Stephen King", "Clive Barker", "Dean Koontz", "H.P. Lovecraft"], c: 0 },
+    { q: "Pitch Black (2000) villains appear when?", a: ["Sunset", "In total darkness", "At dawn", "In storms"], c: 1 },
+    { q: "Lovecraft's most famous creature has what head?", a: ["Squid / octopus-like", "Goat", "Bat", "Serpent"], c: 0 }
+  ],
+
+  // LEVEL 8: Cryptids
+  cryptid: [
+    { q: "The Mothman is most associated with which US town?", a: ["Point Pleasant, WV", "Roswell, NM", "Flatwoods, WV", "Loveland, OH"], c: 0 },
+    { q: "Bigfoot is also known by which Native American-inspired name?", a: ["Yeti", "Sasquatch", "Wendigo", "Skinwalker"], c: 1 },
+    { q: "The Loch Ness Monster is nicknamed?", a: ["Nessie", "Lochy", "Scottie", "Nellie"], c: 0 },
+    { q: "The Chupacabra literally translates to?", a: ["Night beast", "Goat sucker", "Blood eater", "Dog ghost"], c: 1 },
+    { q: "The Jersey Devil is native to?", a: ["Pine Barrens, New Jersey", "Adirondacks, NY", "Everglades, FL", "Ozarks, MO"], c: 0 },
+    { q: "The Wendigo is from which cultural tradition?", a: ["Norse", "Algonquian", "Celtic", "Aztec"], c: 1 },
+    { q: "The Flatwoods Monster was reported in what year?", a: ["1952", "1962", "1972", "1982"], c: 0 },
+    { q: "The Yeti is associated with which mountain range?", a: ["Rockies", "Alps", "Himalayas", "Andes"], c: 2 },
+    { q: "The Mothman was reportedly linked to the collapse of which bridge?", a: ["Tacoma Narrows", "Silver Bridge", "Brooklyn Bridge", "I-35W"], c: 1 },
+    { q: "Skinwalkers come from which tradition?", a: ["Cherokee", "Navajo", "Apache", "Sioux"], c: 1 },
+    { q: "The Fresno Nightcrawlers are described as?", a: ["Winged reptiles", "Pants-shaped walking creatures", "Bipedal wolves", "Floating heads"], c: 1 },
+    { q: "The Beast of Bray Road is reported in which state?", a: ["Wisconsin", "Michigan", "Minnesota", "Ohio"], c: 0 },
+    { q: "Momo the Missouri Monster is described as resembling?", a: ["A Bigfoot variant", "A mothman variant", "A lizard man", "A large cat"], c: 0 },
+    { q: "The Lizard Man of Scape Ore Swamp is from?", a: ["Louisiana", "South Carolina", "Florida", "Georgia"], c: 1 },
+    { q: "The Dover Demon was sighted in what year?", a: ["1977", "1985", "1992", "1968"], c: 0 },
+    { q: "Champ is the lake monster of?", a: ["Lake Michigan", "Lake Champlain", "Lake Tahoe", "Great Salt Lake"], c: 1 },
+    { q: "The Pope Lick Monster is said to be part goat and part?", a: ["Man", "Wolf", "Snake", "Horse"], c: 0 },
+    { q: "The Ozark Howler is described as?", a: ["A bird-man", "A large cat-like beast with horns", "A shadow figure", "A swamp serpent"], c: 1 },
+    { q: "Thunderbirds in cryptid lore are described as?", a: ["Giant prehistoric-like birds", "Lightning elementals", "Ghost birds", "Winged serpents"], c: 0 },
+    { q: "The Hopkinsville Goblins incident occurred in?", a: ["Kentucky, 1955", "Ohio, 1948", "Tennessee, 1962", "Indiana, 1971"], c: 0 },
+    { q: "Bunyip is a cryptid from?", a: ["Australia", "New Zealand", "Papua New Guinea", "Fiji"], c: 0 },
+    { q: "The Jackalope is most associated with?", a: ["American West", "Canadian Rockies", "Scottish Highlands", "Australian Outback"], c: 0 },
+    { q: "The Rake is a cryptid popularized by?", a: ["Folk legend", "Creepypasta / internet horror", "Indigenous oral tradition", "Victorian novels"], c: 1 },
+    { q: "El Chupacabra sightings first surged in which country?", a: ["Mexico", "Puerto Rico", "Cuba", "Dominican Republic"], c: 1 },
+    { q: "The Flatwoods Monster is sometimes called?", a: ["The Green Man", "The Braxton County Monster", "The West Virginia Visitor", "All of the above"], c: 3 }
+  ],
+
+  // LEVEL 9: True crime
+  truecrime: [
+    { q: "Who was known as the 'Milwaukee Cannibal'?", a: ["Ted Bundy", "Jeffrey Dahmer", "John Wayne Gacy", "Ed Gein"], c: 1 },
+    { q: "The killer who inspired Psycho and Texas Chainsaw Massacre was?", a: ["Ed Gein", "Albert Fish", "Richard Ramirez", "Dennis Rader"], c: 0 },
+    { q: "The Zodiac Killer was most active in which region?", a: ["Northern California / Bay Area", "Los Angeles", "New York", "Chicago"], c: 0 },
+    { q: "BTK stands for?", a: ["Bind, Torture, Kill", "Break, Take, Keep", "Burn, Tie, Kill", "Blood, Terror, Knife"], c: 0 },
+    { q: "BTK's real identity is?", a: ["Dennis Rader", "Gary Ridgway", "Richard Ramirez", "Ted Bundy"], c: 0 },
+    { q: "John Wayne Gacy was known to dress as what at parties?", a: ["A magician", "A clown", "A ringmaster", "A firefighter"], c: 1 },
+    { q: "Ted Bundy commonly feigned what to lure victims?", a: ["Blindness", "An arm in a sling", "Deafness", "A heart attack"], c: 1 },
+    { q: "The 'Night Stalker' of 1984–85 LA was?", a: ["Richard Ramirez", "Albert DeSalvo", "Kenneth Bianchi", "The Zodiac"], c: 0 },
+    { q: "Jack the Ripper was active in what year?", a: ["1788", "1888", "1908", "1928"], c: 1 },
+    { q: "Aileen Wuornos was the subject of what 2003 film?", a: ["Monster", "Chained", "Dahmer", "Confessions"], c: 0 },
+    { q: "The Golden State Killer was identified via?", a: ["A confession", "Genealogy DNA sites", "Fingerprints", "An eyewitness"], c: 1 },
+    { q: "Gary Ridgway was known as the?", a: ["Green River Killer", "I-5 Killer", "Happy Face Killer", "Son of Sam"], c: 0 },
+    { q: "The 'Son of Sam' killer's real name is?", a: ["David Berkowitz", "Ted Bundy", "Dennis Rader", "Edmund Kemper"], c: 0 },
+    { q: "Edmund Kemper was known as the?", a: ["Co-ed Killer", "Campus Killer", "Highway Killer", "Forest Killer"], c: 0 },
+    { q: "Ariel Castro kidnapped and imprisoned women in which city?", a: ["Cleveland", "Detroit", "Pittsburgh", "Columbus"], c: 0 },
+    { q: "The Unabomber's real name is?", a: ["Timothy McVeigh", "Ted Kaczynski", "Eric Rudolph", "David Koresh"], c: 1 },
+    { q: "The Black Dahlia case took place in?", a: ["Los Angeles, 1947", "New York, 1953", "Chicago, 1949", "San Francisco, 1956"], c: 0 },
+    { q: "The West Memphis Three were convicted in which state?", a: ["Arkansas", "Tennessee", "Mississippi", "Alabama"], c: 0 },
+    { q: "Jon Benet Ramsey's case took place in?", a: ["Boulder, CO", "Denver, CO", "Aurora, CO", "Colorado Springs"], c: 0 },
+    { q: "Charles Manson's cult was associated with what ranch?", a: ["Spahn Ranch", "Barker Ranch", "Both of those", "Neither"], c: 2 },
+    { q: "Adnan Syed's case was popularized by which podcast?", a: ["Serial", "S-Town", "Crime Junkie", "My Favorite Murder"], c: 0 },
+    { q: "The Zodiac Killer's cipher was partially solved in?", a: ["2015", "2020", "2021", "2023"], c: 2 },
+    { q: "Ed Kemper committed most of his killings in?", a: ["California", "Oregon", "Nevada", "Washington"], c: 0 },
+    { q: "The Toy-Box Killer is infamous for?", a: ["A torture chamber trailer in NM", "A hidden bunker in TX", "A cabin in OR", "A basement in IL"], c: 0 },
+    { q: "Robert Hansen (Alaska) was called the?", a: ["Butcher Baker", "Ice Man", "Arctic Killer", "North Star Killer"], c: 0 }
+  ],
+
+  // LEVEL 10: Final Boss (mixed categories)
+  boss: [
+    { q: "In Alien, what kills Kane at the breakfast table?", a: ["Facehugger", "Chestburster", "Xenomorph drone", "Acid blood"], c: 1 },
+    { q: "In Hereditary, who is crowned as Paimon at the end?", a: ["Annie", "Peter", "Charlie (posthumously)", "The grandmother"], c: 1 },
+    { q: "Which Lovecraft story features the Deep Ones?", a: ["Dunwich Horror", "Shadow Over Innsmouth", "Call of Cthulhu", "Colour Out of Space"], c: 1 },
+    { q: "Jeffrey Dahmer was apprehended in what year?", a: ["1989", "1991", "1993", "1995"], c: 1 },
+    { q: "In Midsommar, the ritual at the cliff is called?", a: ["Ättestupa", "Blót", "Jul", "Midvinterblot"], c: 0 },
+    { q: "In Scream, what is Ghostface's signature opening line on the phone?", a: ["'What's your favorite scary movie?'", "'Do you like horror?'", "'Who am I?'", "'Hello, is it me?'"], c: 0 },
+    { q: "What classic 1973 film features Regan possessed by Pazuzu?", a: ["The Omen", "The Exorcist", "Rosemary's Baby", "Carrie"], c: 1 },
+    { q: "In Get Out, what method is used to control victims?", a: ["Hypnosis", "Drugs", "Ritual", "Technology implants"], c: 0 },
+    { q: "What does the Zodiac Killer's final accepted cipher spell?", a: ["Their name", "'I hope you enjoy hunting me'", "A riddle (solved 2020)", "A biblical quote"], c: 2 },
+    { q: "In The Thing, the iconic 'spider head' scene involves?", a: ["A severed head sprouting legs", "A spider creature", "A hallucination", "An illusion"], c: 0 },
+    { q: "In Ringu, what well is key to Sadako's story?", a: ["An abandoned cabin's well", "A shrine well", "A family well on an island", "A city well"], c: 2 },
+    { q: "The cryptid nicknamed 'Owlman' is from?", a: ["Cornwall, England", "Kentucky, USA", "Hessdalen, Norway", "Yorkshire, UK"], c: 0 },
+    { q: "In It Follows, how is the curse lifted temporarily?", a: ["Killing it", "Passing it on via sex", "Burning it", "Praying"], c: 1 },
+    { q: "The BTK killer's capture was aided by?", a: ["A floppy disk's metadata", "A fingerprint", "A license plate", "A witness"], c: 0 },
+    { q: "Night of the Living Dead was filmed in what state?", a: ["Pennsylvania", "Ohio", "New York", "Kentucky"], c: 0 },
+    { q: "Which killer called himself 'Jack the Ripper' in letters?", a: ["Yes, that was a letter's signature", "No, a journalist named him", "Historians dispute it", "It was made up"], c: 0 },
+    { q: "In The Conjuring, the Annabelle doll is kept in?", a: ["A locked closet", "A glass case in a museum room", "A safe", "A basement"], c: 1 },
+    { q: "The Mothman Prophecies (2002) stars?", a: ["Richard Gere", "Tom Cruise", "Brad Pitt", "Nicolas Cage"], c: 0 },
+    { q: "In Shutter Island, the doctor's real name is revealed to be?", a: ["Teddy Daniels", "Andrew Laeddis", "John Cawley", "Peter Breene"], c: 1 },
+    { q: "Which killer's crimes inspired Silence of the Lambs's Buffalo Bill?", a: ["Ed Gein, Ted Bundy, Gary Heidnik (composite)", "Only Ted Bundy", "Only Ed Gein", "Only Jeffrey Dahmer"], c: 0 },
+    { q: "In The Wicker Man (1973), the final sacrifice is for?", a: ["Rain", "A failed harvest / next year's crops", "Fertility", "Revenge"], c: 1 },
+    { q: "In Train to Busan, where does the outbreak start?", a: ["Seoul", "A biotech lab near Busan", "Incheon airport", "A hospital"], c: 1 },
+    { q: "In The Witch, the family's infant is taken by?", a: ["Thomasin", "A witch (off-screen)", "A wolf", "The father"], c: 1 },
+    { q: "In Saw, what does Dr. Gordon have to do to escape?", a: ["Solve a puzzle", "Cut off his foot", "Kill Adam", "Both B and C"], c: 3 },
+    { q: "In Hereditary, what is the family's surname?", a: ["Graham", "Grady", "Gray", "Grimes"], c: 0 },
+    { q: "In The Ring, watching the tape curses you for?", a: ["3 days", "7 days", "13 days", "30 days"], c: 1 },
+    { q: "Aileen Wuornos was executed in which state?", a: ["Texas", "Florida", "California", "Georgia"], c: 1 },
+    { q: "In Event Horizon, the crew's sanity collapses because?", a: ["Oxygen loss", "The ship went somewhere hellish", "Radiation", "Alien invasion"], c: 1 },
+    { q: "In Get Out, what does a camera flash do to the controlled?", a: ["Hypnotizes them", "Momentarily frees them", "Kills them", "Paralyzes them"], c: 1 },
+    { q: "The final girl trope was named by which scholar?", a: ["Carol Clover", "Judith Butler", "Linda Williams", "Barbara Creed"], c: 0 }
+  ]
+};
+
+/* ======================================================================
+   STATE
+====================================================================== */
+let state = {
+  mode: "solo", // or "multi"
+  players: [], // [{name, archetype, lives, perkUses, freeMissUsed, reviveUsed}]
+  currentPlayerIdx: 0,
+  pickingPlayerIdx: 0, // for selection phase
+  levelIdx: 0,
+  qIdx: 0,
+  chaseDistance: 100,
+  usedQuestions: {},
+  currentQuestion: null,
+  totalCorrect: 0,
+  totalAnswered: 0,
+  lungeTimer: null
+};
+
+/* ======================================================================
+   TITLE / MODE
+====================================================================== */
+function chooseMode(mode) {
+  state.mode = mode;
+  initAudio();
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  if (mode === "solo") {
+    state.players = [{ name: "Survivor", archetype: null, lives: 0, perkUses: 0, freeMissUsed: false, reviveUsed: false }];
+    state.pickingPlayerIdx = 0;
+    show("select");
+    renderArchetypes();
+  } else {
+    show("mp-setup");
+    renderPlayerCount();
+  }
+}
+
+function renderPlayerCount() {
+  document.querySelectorAll(".pc-btn").forEach(b => b.classList.remove("selected"));
+  document.getElementById("name-inputs").innerHTML = "";
+  document.getElementById("mp-continue").style.opacity = "0.3";
+  document.getElementById("mp-continue").style.pointerEvents = "none";
+}
+
+function setPlayerCount(n) {
+  document.querySelectorAll(".pc-btn").forEach(b => {
+    b.classList.toggle("selected", parseInt(b.dataset.n) === n);
+  });
+  const wrap = document.getElementById("name-inputs");
+  wrap.innerHTML = "";
+  state.players = [];
+  for (let i = 0; i < n; i++) {
+    const inp = document.createElement("input");
+    inp.className = "name-input";
+    inp.placeholder = `Player ${i+1}`;
+    inp.value = `Player ${i+1}`;
+    inp.maxLength = 16;
+    inp.dataset.idx = i;
+    inp.oninput = checkMpReady;
+    wrap.appendChild(inp);
+    state.players.push({ name: `Player ${i+1}`, archetype: null, lives: 0, perkUses: 0, freeMissUsed: false, reviveUsed: false });
+  }
+  checkMpReady();
+}
+
+function checkMpReady() {
+  const inputs = document.querySelectorAll(".name-input");
+  const allFilled = [...inputs].every(i => i.value.trim().length > 0);
+  const btn = document.getElementById("mp-continue");
+  btn.style.opacity = allFilled ? "1" : "0.3";
+  btn.style.pointerEvents = allFilled ? "auto" : "none";
+}
+
+function mpContinue() {
+  const inputs = document.querySelectorAll(".name-input");
+  inputs.forEach(i => {
+    state.players[parseInt(i.dataset.idx)].name = i.value.trim() || `Player ${parseInt(i.dataset.idx)+1}`;
+  });
+  state.pickingPlayerIdx = 0;
+  show("select");
+  renderArchetypes();
+}
+
+/* ======================================================================
+   SELECT
+====================================================================== */
+function renderArchetypes() {
+  // Show who's picking
+  const picker = document.getElementById("current-picker");
+  const p = state.players[state.pickingPlayerIdx];
+  if (state.mode === "multi") {
+    picker.textContent = `${p.name}, choose your fate`;
+    picker.style.display = "block";
+  } else {
+    picker.style.display = "none";
+  }
+
+  // Figure out which archetypes are taken
+  const takenIds = state.players
+    .filter((pl, i) => i < state.pickingPlayerIdx && pl.archetype)
+    .map(pl => pl.archetype.id);
+
+  const wrap = document.getElementById("archetypes");
+  wrap.innerHTML = "";
+  ARCHETYPES.forEach(a => {
+    const taken = takenIds.includes(a.id);
+    const div = document.createElement("div");
+    div.className = "archetype" + (taken ? " taken" : "");
+    if (!taken) div.onclick = () => selectArchetype(a.id);
+    div.dataset.id = a.id;
+    div.innerHTML = `
+      <div class="icon">${a.icon}</div>
+      <h3>${a.name}${taken ? '<span class="taken-badge">TAKEN</span>' : ''}</h3>
+      <div class="desc">${a.desc}</div>
+      <div class="stats">
+        ${a.stats.map(s => `<div class="stat ${s.type}"><span>${s.label}</span><span>${s.value}</span></div>`).join("")}
+      </div>
+    `;
+    wrap.appendChild(div);
+  });
+
+  document.getElementById("confirm-btn").classList.remove("ready");
+  state.players[state.pickingPlayerIdx].archetype = null;
+}
+
+function selectArchetype(id) {
+  state.players[state.pickingPlayerIdx].archetype = ARCHETYPES.find(a => a.id === id);
+  document.querySelectorAll(".archetype").forEach(el => {
+    el.classList.toggle("selected", el.dataset.id === id);
+  });
+  document.getElementById("confirm-btn").classList.add("ready");
+}
+
+function confirmArchetype() {
+  if (!state.players[state.pickingPlayerIdx].archetype) return;
+  state.pickingPlayerIdx++;
+  if (state.pickingPlayerIdx < state.players.length) {
+    renderArchetypes();
+  } else {
+    goStory();
+  }
+}
+
+function goStory() {
+  show("story");
+  startAmbient();
+  setTimeout(() => playStinger("scare"), 6800);
+}
+
+function backToTitle() {
+  stopAmbient(); stopHeartbeat();
+  clearInterval(state.lungeTimer);
+  show("title");
+}
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+/* ======================================================================
+   GAME START
+====================================================================== */
+function startGame() {
+  // Initialize each player's lives/perks
+  state.players.forEach(p => {
+    p.lives = p.archetype.lives;
+    p.perkUses = p.archetype.perk.uses;
+    p.freeMissUsed = false;
+    p.reviveUsed = false;
+  });
+  state.currentPlayerIdx = 0;
+  state.levelIdx = 0;
+  state.qIdx = 0;
+  state.chaseDistance = 100;
+  state.usedQuestions = {};
+  state.totalCorrect = 0;
+  state.totalAnswered = 0;
+
+  show("game");
+  startHeartbeat(70);
+  startKillerLungeLoop();
+  startLevel();
+}
+
+function startLevel() {
+  const level = LEVELS[state.levelIdx];
+  const bg = document.getElementById("game-bg");
+  bg.className = "game-bg " + level.vibe;
+  // Recreate parallax layers
+  bg.innerHTML = `<div class="parallax-layer l1"></div><div class="parallax-layer l2"></div><div class="parallax-layer l3"></div>`;
+  document.getElementById("killer-icon").textContent = level.killer;
+  document.getElementById("player-icon").textContent = level.player;
+
+  // Update killer silhouette (SVG)
+  const sil = document.getElementById("killer-silhouette");
+  sil.innerHTML = `<svg viewBox="0 0 120 200" xmlns="http://www.w3.org/2000/svg" width="120" height="180">
+    <path d="${level.silhouette}" fill="none" stroke="#000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${level.silhouette}" fill="#000" opacity="0.7"/>
+  </svg>`;
+
+  state.chaseDistance = 100;
+  state.qIdx = 0;
+  renderProgressDots(level.questions);
+  spawnParticles(level.vibe);
+  updateHUD();
+  showLevelIntro(level);
+}
+
+function renderProgressDots(count) {
+  const wrap = document.getElementById("progress-dots");
+  wrap.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement("div");
+    d.className = "dot";
+    wrap.appendChild(d);
+  }
+}
+
+function updateProgressDots() {
+  const dots = document.querySelectorAll(".dot");
+  dots.forEach((d, i) => {
+    d.classList.remove("done", "current");
+    if (i < state.qIdx) d.classList.add("done");
+    else if (i === state.qIdx) d.classList.add("current");
+  });
+}
+
+function showLevelIntro(level) {
+  const intro = document.getElementById("level-intro");
+  intro.innerHTML = `
+    <div class="level-num">LEVEL ${level.num} / ${LEVELS.length}</div>
+    <div class="level-title">${level.name}</div>
+    <div class="level-sub">${level.sub}</div>
+  `;
+  intro.style.display = "flex";
+  intro.style.animation = "none";
+  void intro.offsetWidth;
+  intro.style.animation = "levelFade 3.2s forwards";
+  setTimeout(() => {
+    intro.style.display = "none";
+    nextQuestion();
+  }, 3200);
+}
+
+/* ======================================================================
+   PARTICLES
+====================================================================== */
+function spawnParticles(vibe) {
+  const wrap = document.getElementById("particles");
+  wrap.innerHTML = "";
+  let config = { count: 0, color: "#fff", size: [1, 2], speed: [10, 20] };
+
+  if (vibe === "vibe-woods") config = { count: 20, color: "rgba(255,255,255,0.3)", size: [1, 2], speed: [8, 15] }; // fireflies
+  else if (vibe === "vibe-saw") config = { count: 15, color: "rgba(200,100,50,0.4)", size: [1, 3], speed: [20, 40] }; // sparks
+  else if (vibe === "vibe-psych") config = { count: 30, color: "rgba(180,160,220,0.3)", size: [1, 4], speed: [5, 12] }; // floating
+  else if (vibe === "vibe-jhorror") config = { count: 10, color: "rgba(255,255,255,0.2)", size: [1, 2], speed: [15, 25] };
+  else if (vibe === "vibe-folk") config = { count: 25, color: "rgba(255,200,100,0.5)", size: [1, 3], speed: [8, 18] }; // embers
+  else if (vibe === "vibe-zombie") config = { count: 20, color: "rgba(120,50,30,0.4)", size: [2, 5], speed: [8, 15] }; // ash/dust
+  else if (vibe === "vibe-cosmic") config = { count: 40, color: "rgba(100,200,255,0.4)", size: [1, 2], speed: [5, 10] }; // stars
+  else if (vibe === "vibe-cryptid") config = { count: 30, color: "rgba(100,130,110,0.3)", size: [2, 5], speed: [6, 14] }; // fog motes
+  else if (vibe === "vibe-truecrime") config = { count: 15, color: "rgba(200,180,140,0.3)", size: [1, 2], speed: [10, 20] }; // paper dust
+  else if (vibe === "vibe-boss") config = { count: 50, color: "rgba(255,50,80,0.4)", size: [1, 4], speed: [10, 30] }; // chaos embers
+
+  for (let i = 0; i < config.count; i++) {
+    const p = document.createElement("div");
+    p.className = "particle";
+    const size = config.size[0] + Math.random() * (config.size[1] - config.size[0]);
+    const duration = config.speed[0] + Math.random() * (config.speed[1] - config.speed[0]);
+    const delay = Math.random() * duration;
+    const startX = Math.random() * 100;
+    const drift = (Math.random() - 0.5) * 100;
+    p.style.cssText = `
+      width: ${size}px; height: ${size}px;
+      background: ${config.color};
+      left: ${startX}%;
+      top: 110%;
+      box-shadow: 0 0 ${size * 2}px ${config.color};
+      animation: floatUp ${duration}s linear ${-delay}s infinite;
+      --drift: ${drift}px;
+    `;
+    wrap.appendChild(p);
+  }
+  // Inject keyframes if not present
+  if (!document.getElementById("particle-keyframes")) {
+    const style = document.createElement("style");
+    style.id = "particle-keyframes";
+    style.textContent = `
+      @keyframes floatUp {
+        from { transform: translateY(0) translateX(0); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        to { transform: translateY(-120vh) translateX(var(--drift)); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+/* ======================================================================
+   KILLER SILHOUETTE LUNGE — random scare moments
+====================================================================== */
+function startKillerLungeLoop() {
+  clearInterval(state.lungeTimer);
+  state.lungeTimer = setInterval(() => {
+    // More frequent lunges when the chase is closer
+    const chance = state.chaseDistance < 50 ? 0.4 : 0.15;
+    if (Math.random() < chance) {
+      triggerLunge();
+    }
+  }, 6000);
+}
+
+function triggerLunge() {
+  const sil = document.getElementById("killer-silhouette");
+  sil.classList.remove("lunge");
+  void sil.offsetWidth;
+  // Position it randomly on-screen during lunge
+  const x = 20 + Math.random() * 60;
+  sil.style.left = x + "%";
+  sil.classList.add("lunge");
+  playStinger("lunge");
+  setTimeout(() => {
+    sil.classList.remove("lunge");
+    sil.style.left = "-150px";
+  }, 900);
+}
+
+/* ======================================================================
+   QUESTIONS
+====================================================================== */
+function nextQuestion() {
+  const level = LEVELS[state.levelIdx];
+  if (state.qIdx >= level.questions) {
+    levelComplete();
+    return;
+  }
+
+  const poolKey = level.poolKey;
+  const pool = QUESTIONS[poolKey];
+  if (!state.usedQuestions[poolKey]) state.usedQuestions[poolKey] = new Set();
+
+  let available = pool.map((_, i) => i).filter(i => !state.usedQuestions[poolKey].has(i));
+  if (available.length === 0) {
+    state.usedQuestions[poolKey] = new Set();
+    available = pool.map((_, i) => i);
+  }
+  const poolIdx = available[Math.floor(Math.random() * available.length)];
+  state.usedQuestions[poolKey].add(poolIdx);
+  const q = pool[poolIdx];
+  state.currentQuestion = q;
+
+  document.getElementById("category").textContent = level.category;
+  document.getElementById("question-text").textContent = q.q;
+
+  // Turn indicator for multiplayer
+  if (state.mode === "multi") {
+    const ti = document.getElementById("turn-indicator");
+    const p = state.players[state.currentPlayerIdx];
+    ti.textContent = `${p.name}'s turn — ${p.archetype.name}`;
+    ti.style.display = "block";
+  } else {
+    document.getElementById("turn-indicator").style.display = "none";
+  }
+
+  // Re-trigger fadeIn
+  document.getElementById("category").style.animation = "none";
+  document.getElementById("question-text").style.animation = "none";
+  void document.getElementById("category").offsetWidth;
+  document.getElementById("category").style.animation = "fadeIn 0.5s 0.1s forwards";
+  document.getElementById("question-text").style.animation = "fadeIn 0.5s 0.3s forwards";
+
+  const answersDiv = document.getElementById("answers");
+  answersDiv.innerHTML = "";
+  const letters = ["A", "B", "C", "D"];
+  q.a.forEach((answer, i) => {
+    const btn = document.createElement("button");
+    btn.className = "answer";
+    btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${answer}</span>`;
+    btn.onclick = () => handleAnswer(i, q.c, btn);
+    answersDiv.appendChild(btn);
+  });
+
+  updateHUD();
+  updatePerkButton();
+  updateProgressDots();
+  updateHeartbeatIntensity();
+}
+
+function handleAnswer(chosen, correct, btn) {
+  const all = document.querySelectorAll(".answer");
+  all.forEach(a => a.classList.add("locked"));
+  state.totalAnswered++;
+  const currentPlayer = state.players[state.currentPlayerIdx];
+
+  if (chosen === correct) {
+    btn.classList.add("correct");
+    state.totalCorrect++;
+    flash("green");
+    playStinger("correct");
+    state.chaseDistance = Math.min(100, state.chaseDistance + 8);
+    updateHUD();
+    setTimeout(() => {
+      state.qIdx++;
+      rotateTurn();
+      nextQuestion();
+    }, 900);
+  } else {
+    btn.classList.add("wrong");
+    all[correct].classList.add("correct");
+    flash("red");
+    playStinger("wrong");
+
+    let lossMultiplier = 1;
+    if (currentPlayer.archetype.id === "skeptic" && !currentPlayer.freeMissUsed) {
+      currentPlayer.freeMissUsed = true;
+      lossMultiplier = 0;
+      showToast("COOL HEAD — the blow glances off");
+    } else if (currentPlayer.archetype.id === "nerd") {
+      lossMultiplier = 1.3;
+    }
+
+    const baseLoss = 22 + (state.levelIdx * 2);
+    const loss = Math.round(baseLoss * lossMultiplier);
+    state.chaseDistance = Math.max(0, state.chaseDistance - loss);
+
+    if (state.chaseDistance <= 0) {
+      currentPlayer.lives--;
+      updateHUD();
+      if (currentPlayer.lives <= 0) {
+        if (currentPlayer.archetype.id === "final_girl" && !currentPlayer.reviveUsed) {
+          currentPlayer.reviveUsed = true;
+          currentPlayer.lives = 1;
+          state.chaseDistance = 60;
+          showToast("SECOND CHANCE — you crawl away from death");
+          updateHUD();
+          setTimeout(() => {
+            state.qIdx++;
+            rotateTurn();
+            nextQuestion();
+          }, 1400);
+          return;
+        }
+        // Check multi-player: if any player alive, rotate to them
+        if (state.mode === "multi" && state.players.some(p => p.lives > 0)) {
+          showToast(`${currentPlayer.name} has fallen...`);
+          setTimeout(() => {
+            rotateTurn(true); // force skip dead players
+            state.qIdx = 0; // restart level
+            state.chaseDistance = 100;
+            updateHUD();
+            showToast("LEVEL RESTARTS FROM QUESTION 1");
+            setTimeout(() => nextQuestion(), 1400);
+          }, 1400);
+          return;
+        }
+        setTimeout(() => gameOver(false), 1200);
+        return;
+      } else {
+        // Lost life, restart level from q1
+        showToast(`YOU'RE HIT — BACK TO QUESTION 1`);
+        state.qIdx = 0;
+        state.chaseDistance = 100;
+        setTimeout(() => nextQuestion(), 1400);
+        return;
+      }
+    }
+    updateHUD();
+    setTimeout(() => {
+      state.qIdx++;
+      rotateTurn();
+      nextQuestion();
+    }, 1400);
+  }
+}
+
+function rotateTurn(forceSkipDead = false) {
+  if (state.mode !== "multi") return;
+  let tries = 0;
+  do {
+    state.currentPlayerIdx = (state.currentPlayerIdx + 1) % state.players.length;
+    tries++;
+  } while (state.players[state.currentPlayerIdx].lives <= 0 && tries < state.players.length * 2);
+}
+
+function levelComplete() {
+  state.levelIdx++;
+  if (state.levelIdx >= LEVELS.length) {
+    gameOver(true);
+  } else {
+    showToast("LEVEL CLEARED — the night grows deeper");
+    setTimeout(() => startLevel(), 1400);
+  }
+}
+
+/* ======================================================================
+   PERKS
+====================================================================== */
+function usePerk() {
+  const p = state.players[state.currentPlayerIdx];
+  if (p.perkUses <= 0) return;
+  const perk = p.archetype.perk;
+
+  if (perk.type === "skip") {
+    p.perkUses--;
+    showToast("SKIPPED — the question fades");
+    setTimeout(() => {
+      state.qIdx++;
+      rotateTurn();
+      nextQuestion();
+    }, 700);
+  } else if (perk.type === "fiftyfifty") {
+    const answers = document.querySelectorAll(".answer");
+    if (!state.currentQuestion) return;
+    p.perkUses--;
+    const wrongs = [0,1,2,3].filter(i => i !== state.currentQuestion.c);
+    const toRemove = wrongs.sort(() => Math.random() - 0.5).slice(0, 2);
+    toRemove.forEach(i => {
+      answers[i].classList.add("locked");
+      answers[i].style.opacity = "0.2";
+      answers[i].style.textDecoration = "line-through";
+    });
+    showToast("FIFTY-FIFTY — two lies revealed");
+  } else if (perk.type === "reveal") {
+    const answers = document.querySelectorAll(".answer");
+    if (!state.currentQuestion) return;
+    p.perkUses--;
+    answers[state.currentQuestion.c].style.borderColor = "#6ab04c";
+    answers[state.currentQuestion.c].style.boxShadow = "0 0 20px rgba(106,176,76,0.5)";
+    showToast("GENRE SAVVY — the truth glows");
+  } else if (perk.type === "pushback") {
+    p.perkUses--;
+    state.chaseDistance = Math.min(100, state.chaseDistance + 30);
+    updateHUD();
+    showToast("ADRENALINE — you shove them back");
+  }
+  updatePerkButton();
+}
+
+function updatePerkButton() {
+  const btn = document.getElementById("perk-btn");
+  const p = state.players[state.currentPlayerIdx];
+  if (!p || !p.archetype) return;
+  const perk = p.archetype.perk;
+  btn.textContent = `⚡ ${perk.name} (${p.perkUses})`;
+  btn.disabled = p.perkUses <= 0 || perk.type === "revive" || perk.type === "nocost";
+  if (perk.type === "revive") btn.textContent = `🛡️ ${perk.name} (auto)`;
+  if (perk.type === "nocost") btn.textContent = `🧊 ${perk.name} (auto)`;
+}
+
+/* ======================================================================
+   HUD
+====================================================================== */
+function updateHUD() {
+  const hud = document.getElementById("hud");
+  hud.innerHTML = "";
+
+  // Player blocks
+  state.players.forEach((p, i) => {
+    if (!p.archetype) return;
+    const isCurrent = (i === state.currentPlayerIdx);
+    const block = document.createElement("div");
+    block.className = "hud-block" + (isCurrent ? " active" : "");
+    let livesHtml = "";
+    for (let j = 0; j < p.archetype.lives; j++) {
+      livesHtml += `<svg class="heart${j >= p.lives ? " lost" : ""}" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 21s-7-4.35-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.65-7 10-7 10z"/></svg>`;
+    }
+    block.innerHTML = `
+      <div class="hud-label">${p.archetype.icon} ${p.name}</div>
+      <div class="hud-value">${p.archetype.name}</div>
+      <div class="lives">${livesHtml}</div>
+    `;
+    hud.appendChild(block);
+  });
+
+  // Level/question progress
+  const level = LEVELS[state.levelIdx];
+  const progBlock = document.createElement("div");
+  progBlock.className = "hud-block";
+  progBlock.innerHTML = `
+    <div class="hud-label">Level ${level ? level.num : 1}</div>
+    <div class="hud-value">${Math.min(state.qIdx + 1, level ? level.questions : 15)} / ${level ? level.questions : 15}</div>
+  `;
+  hud.appendChild(progBlock);
+
+  // Chase
+  const killer = document.getElementById("killer-icon");
+  const track = document.querySelector(".chase-track");
+  if (track) {
+    const trackWidth = track.offsetWidth;
+    const killerPos = ((100 - state.chaseDistance) / 100) * (trackWidth - 44);
+    killer.style.left = killerPos + "px";
+  }
+
+  const label = document.getElementById("distance");
+  if (state.chaseDistance > 70) label.textContent = "SAFE DISTANCE";
+  else if (state.chaseDistance > 40) label.textContent = "THEY'RE GAINING";
+  else if (state.chaseDistance > 15) label.textContent = "TOO CLOSE";
+  else label.textContent = "RIGHT BEHIND YOU";
+}
+
+function updateHeartbeatIntensity() {
+  if (!audioEnabled) return;
+  let bpm = 70;
+  if (state.chaseDistance < 70) bpm = 90;
+  if (state.chaseDistance < 40) bpm = 120;
+  if (state.chaseDistance < 15) bpm = 160;
+  startHeartbeat(bpm);
+}
+
+function flash(color) {
+  const f = document.getElementById("flash");
+  f.className = "flash " + color;
+  setTimeout(() => f.className = "flash", 600);
+}
+
+function showToast(msg) {
+  const intro = document.getElementById("level-intro");
+  intro.innerHTML = `<div class="level-sub" style="font-size:22px;color:#c1121f;letter-spacing:0.3em;">${msg}</div>`;
+  intro.style.display = "flex";
+  intro.style.animation = "none";
+  void intro.offsetWidth;
+  intro.style.animation = "levelFade 1.3s forwards";
+  setTimeout(() => intro.style.display = "none", 1300);
+}
+
+/* ======================================================================
+   GAME OVER
+====================================================================== */
+function gameOver(survived) {
+  stopHeartbeat(); stopAmbient();
+  clearInterval(state.lungeTimer);
+
+  const title = document.getElementById("end-title");
+  const stats = document.getElementById("end-stats");
+  const quote = document.getElementById("end-quote");
+
+  if (survived) {
+    title.textContent = "YOU SURVIVED";
+    title.className = "end-title survive";
+    const survivors = state.players.filter(p => p.lives > 0);
+    if (survivors.length > 0) {
+      quote.textContent = `"${survivalQuotes[survivors[0].archetype.id] || 'You made it. Until the sequel.'}"`;
+    }
+  } else {
+    title.textContent = "YOU DIED";
+    title.className = "end-title death";
+    playStinger("wrong");
+    const lastPlayer = state.players[state.currentPlayerIdx];
+    quote.textContent = `"${deathQuotes[lastPlayer.archetype.id] || 'Another name carved in the bark.'}"`;
+  }
+
+  const accuracy = state.totalAnswered > 0
+    ? Math.round((state.totalCorrect / state.totalAnswered) * 100) : 0;
+
+  let playerLines = state.players.map(p => {
+    const status = p.lives > 0 ? `❤️ ${p.lives} left` : "💀 fallen";
+    return `<div>${p.name} — ${p.archetype.name} — ${status}</div>`;
+  }).join("");
+
+  stats.innerHTML = `
+    ${playerLines}
+    <div style="margin-top:8px;">Level Reached: ${Math.min(state.levelIdx + 1, LEVELS.length)} / ${LEVELS.length}</div>
+    <div>Correct: ${state.totalCorrect} / ${state.totalAnswered} (${accuracy}%)</div>
+  `;
+
+  show("end");
+}
+
+const deathQuotes = {
+  final_girl: "Even the last girl runs out of nights.",
+  virgin: "Purity wasn't enough this time.",
+  jock: "Should've read more books.",
+  joker: "The punchline was you.",
+  nerd: "Knew everything. Except how to run.",
+  skeptic: "You believe now."
+};
+const survivalQuotes = {
+  final_girl: "You always knew it would come down to you.",
+  virgin: "Dawn breaks. You are spared.",
+  jock: "Turns out muscles AND trivia do matter.",
+  joker: "You laughed your way out alive.",
+  nerd: "Every movie you watched paid off.",
+  skeptic: "You still don't believe. But you're alive."
+};
+</script>
+</body>
+</html>
